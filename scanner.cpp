@@ -2,7 +2,7 @@
  * Example C++ Lexical Analyzer
  * Written for CPSC 411 Tutorial
  * File: scanner.cpp
- * Shankar Ganesh
+ * Taken from Shankar Ganesh to be used as starter code.
  * *****************************/
 
 #include <FlexLexer.h>
@@ -13,7 +13,7 @@
 
 
 int main(int argc, char **argv) {
-    std::istream *input = &std::cin;
+    std::istream *input;
 
     std::ifstream file;
 
@@ -34,8 +34,12 @@ int main(int argc, char **argv) {
     int tok;
 
     while ((tok = lexer->yylex()) != 0) {
-        std::cout << "line: " << lexer->getLine() << " token " << getName(tok) << " Lexeme: "
-            << lexer->lexeme << "\n";
+        std::string lexemeOutput = "\n";
+        if (!lexer->lexeme.empty()) {
+            lexemeOutput = " - Lexeme: " + lexer->lexeme + "\n";
+        }
+        std::cout << "Line: " << lexer->getLine() << " - Token: " << getName(tok) << lexemeOutput;
+        lexer->lexeme.clear();
     }
 
     if (file.is_open()) file.close();
