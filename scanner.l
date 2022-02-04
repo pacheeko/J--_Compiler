@@ -60,8 +60,8 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 "=="        return T_EQ;
 "!="        return T_NEQ;
 "!"         return T_NOT;
-"&&"        return T_AND;
-"||"        return T_OR;
+"&/&"       return T_AND;
+"|/|"       return T_OR;
 "("         return T_OPENPAR;
 ")"         return T_CLOSEPAR;
 "{"         return T_OPENBRACE;
@@ -70,6 +70,7 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 ","         return T_COMMA;
 {ID}        {lexeme = std::string(YYText()); return T_ID;}
 {num}       {lexeme = std::string(YYText()); return T_NUM;}
+.         {std::cout << "WARNING: Ignoring bad character at or near line " << lineno() << std::endl;}
 %% 
 
 /* User routines here*/
