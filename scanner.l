@@ -1,3 +1,5 @@
+/* Taken from Shankar Ganesh to be used as starter code */
+
 %option c++
 %option yyclass="CCLexer"
 %option yylineno
@@ -8,6 +10,14 @@
     #include <iostream>
     #include <fstream>
     #include "scanner.hpp"
+    #include <string>
+    double num;
+    int strLength;
+    /*Warnings are counted on each line, if there are more than 10
+      warnings on a single line, the program exits with an error.
+      The number of warnings resets when a new line is found. */
+    int warnings = 0;
+    int checkWarnings();
 %}
 
 /* Definitions here */
@@ -19,23 +29,32 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 
 /* Comment States */
 %x STRING
-%x ONELINECOMMENT
-%x MULTILINECOMMENT
 %x BADSTRING
+%x SINGLELINECOMMENT
+%x MULTILINECOMMENT
 
 %% 
 
  /* Rules here */
 [ \t\r]+    ;          
-\n          ; 
-"/*"(.|\n)*"*/"	{std::cout << "multiline comment" << std::endl;};
-"//"(.)*[\n]?   {std::cout << "single line comment" << std::endl;};
-\"              {yymore(); BEGIN(STRING);}  
-<STRING>\"      {lexeme = std::string(YYText()); BEGIN(INITIAL); return T_STRING;}
-<STRING>\n     {std::cerr << "ERROR: newline in string at line " << lineno() << std::endl; BEGIN(BADSTRING);}
-<STRING><<EOF>> {std::cerr << "ERROR: string literal opened but never closed" << std::endl;}
-<STRING>.       {yymore();}
+\n          {warnings = 0;} 
+"/*"        {BEGIN(MULTILINECOMMENT);}
+<MULTILINECOMMENT>"*/"  {BEGIN(INITIAL);}
+<MULTILINECOMMENT><<EOF>> {return 0;}
+<MULTILINECOMMENT>\n    ;
+<MULTILINECOMMENT>. ;
+"//"        {BEGIN(SINGLELINECOMMENT);}
+<SINGLELINECOMMENT>\n   {BEGIN(INITIAL);}
+<SINGLELINECOMMENT><<EOF>> {return 0;}
+<SINGLELINECOMMENT>.    ;
+\"              {lexeme.append(YYText()); BEGIN(STRING);}  
+<STRING>(\\\b|\\\f|\\\t|\\\r|\\\n|\\\'|\\\"|\\\\|\\\0)    {yymore();}
+<STRING>\"      {lexeme.append(YYText()); BEGIN(INITIAL); return T_STRING;}
+<STRING>\n      {std::cerr << "ERROR: newline in string at line " << lineno() << std::endl; warnings++; BEGIN(BADSTRING);}
+<STRING><<EOF>> {std::cerr << "ERROR: string literal opened but never closed at line " << lineno() << std::endl; warnings++; return 0;}
+<STRING>.       {lexeme.append(YYText());}
 <BADSTRING>\"   {BEGIN(INITIAL);}
+<BADSTRING><<EOF>>  {return 0;}
 <BADSTRING>.    ;
 "true"      return T_TRUE;
 "false"     return T_FALSE;
@@ -60,8 +79,8 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 "=="        return T_EQ;
 "!="        return T_NEQ;
 "!"         return T_NOT;
-"&/&"       return T_AND;
-"|/|"       return T_OR;
+"&&"        return T_AND;
+"||"        return T_OR;
 "("         return T_OPENPAR;
 ")"         return T_CLOSEPAR;
 "{"         return T_OPENBRACE;
@@ -69,8 +88,18 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 ";"         return T_SEMICOLON;
 ","         return T_COMMA;
 {ID}        {lexeme = std::string(YYText()); return T_ID;}
-{num}       {lexeme = std::string(YYText()); return T_NUM;}
-.         {std::cout << "WARNING: Ignoring bad character at or near line " << lineno() << std::endl;}
+{num}       {lexeme = std::string(YYText()); 
+             num = std::stod(YYText());
+             if (num > 2147483647) {
+                 std::cout << "WARNING: number " << YYText() << " out of int range on line " << lineno() << std::endl;
+             }
+             return T_NUM;}
+.           {std::cout << "WARNING: bad character around line " << lineno() << std::endl; 
+             warnings++;
+             if (checkWarnings() == 0) {
+                 std::cout << "ERROR: Too many warnings near line " << lineno() << ". Exiting." << std::endl;
+                 return 0;}
+            }
 %% 
 
 /* User routines here*/
@@ -80,4 +109,13 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 /* Creates and returns unique pointer to lexer */
 std::unique_ptr<CCLexer> createLexer(std::istream* input) {
     return std::make_unique<CCLexer>(input);
+}
+/* Checks to see if the number of warnings in a line is > 10 */
+int checkWarnings() {
+    if (warnings > 10) {
+        return 0;
+    }
+    else {
+        return 1;
+    }
 }

@@ -1,7 +1,4 @@
 /********************************
- * Example C++ Lexical Analyzer
- * Written for CPSC 411 Tutorial
- * File: scanner.hpp
  * Taken from Shankar Ganesh to be used as starter code.
  * *****************************/
 
@@ -17,6 +14,7 @@ enum {
     T_ID = 1,
     T_NUM,
     T_STRING,
+    T_ENDOFFILE,
     //Reserved words
     T_TRUE,
     T_FALSE,
@@ -57,13 +55,10 @@ enum {
 class CCLexer : public yyFlexLexer {
     public:
 
-    // Can also shoose to specify ostream, but not necessary
     CCLexer(std::istream *in) : yyFlexLexer(in) { yylineno = 1; }
     
     virtual ~CCLexer() = default;
 
-    // Flex will produce this function.
-    // BUT YOU MUST HAVE THE PROTOTYPE IN THE CLASS
     int yylex();
 
     int getLine() {return yylineno;}

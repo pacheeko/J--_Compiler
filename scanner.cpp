@@ -1,7 +1,4 @@
 /********************************
- * Example C++ Lexical Analyzer
- * Written for CPSC 411 Tutorial
- * File: scanner.cpp
  * Taken from Shankar Ganesh to be used as starter code.
  * *****************************/
 
