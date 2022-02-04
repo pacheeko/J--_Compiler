@@ -12,7 +12,6 @@
     #include "scanner.hpp"
     #include <string>
     double num;
-    int strLength;
     /*Warnings are counted on each line, if there are more than 10
       warnings on a single line, the program exits with an error.
       The number of warnings resets when a new line is found. */
