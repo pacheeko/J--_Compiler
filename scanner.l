@@ -91,14 +91,14 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 {num}       {lexeme = std::string(YYText()); 
              num = std::stod(YYText());
              if (num > 2147483647) {
-                 std::cout << "WARNING: number " << YYText() << " out of int range on line " << lineno() << std::endl;
+                 std::cerr << "WARNING: number " << YYText() << " out of int range on line " << lineno() << std::endl;
              }
              return T_NUM;}
-.           {std::cout << "WARNING: bad character around line " << lineno() << std::endl; 
+.           {std::cerr << "WARNING: bad character around line " << lineno() << std::endl; 
              warnings++;
              if (checkWarnings() == 0) {
-                 std::cout << "ERROR: Too many warnings near line " << lineno() << ". Exiting." << std::endl;
-                 return 0;}
+                 std::cerr << "ERROR: Too many warnings near line " << lineno() << ". Exiting." << std::endl;
+                 exit(EXIT_FAILURE);}
             }
 %% 
 
