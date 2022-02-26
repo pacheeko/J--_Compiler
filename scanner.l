@@ -1,8 +1,5 @@
-/* Taken from Shankar Ganesh to be used as starter code */
-
 %option c++
-%option yyclass="CCLexer"
-%option yylineno
+%option yyclass="JCC::Lexer"
 %option noyywrap
 
 /* Declarations */
@@ -10,7 +7,24 @@
     #include <iostream>
     #include <fstream>
     #include "scanner.hpp"
-    #include <string>
+    #include "parser.hh"
+    #include "vector"
+    
+    // The token this time is in the parser class
+    // If no namespace and class is used, then the default is yy::Parser::token
+    using Token = JCC::Parser::token;
+
+    // Should have this if you're using C++
+    // Defines yylex with parameters. Flex will produce this function.
+    // semantic_type is YYSTYPE, the union defined in bison. 
+    #undef  YY_DECL
+    #define YY_DECL int JCC::Lexer::yylex(JCC::Parser::semantic_type *yylval, JCC::Parser::location_type *loc)
+
+    // Everytime yylex is called, the location is updated for a token
+    // loc->step() sets the begin character for the token. 
+    // And loc->columns sets the number of characters for the token
+    #define YY_USER_ACTION loc->step(); loc->columns(yyleng);
+
     double num;
     int strLength;
     /*Warnings are counted on each line, if there are more than 10
@@ -42,49 +56,48 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 <COMMENT>\n   {BEGIN(INITIAL);}
 <COMMENT><<EOF>> {return 0;}
 <COMMENT>.    ;
-\"              {lexeme.append(YYText()); BEGIN(STRING);}  
+\"              {BEGIN(STRING);}  
 <STRING>(\\\b|\\\f|\\\t|\\\r|\\\n|\\\'|\\\"|\\\\|\\\0)    {yymore();}
-<STRING>\"      {lexeme.append(YYText()); BEGIN(INITIAL); return T_STRING;}
+<STRING>\"      {BEGIN(INITIAL); std::cout << "string here" << std::endl; return Token::T_STRING;}
 <STRING>\n      {std::cerr << "ERROR: newline in string at line " << lineno() << std::endl; warnings++; linewarnings++; BEGIN(BADSTRING);}
 <STRING><<EOF>> {std::cerr << "ERROR: string literal opened but never closed at line " << lineno() << std::endl; warnings++; linewarnings++; return 0;}
-<STRING>.       {lexeme.append(YYText());}
+<STRING>.       {}
 <BADSTRING>\"   {BEGIN(INITIAL);}
 <BADSTRING><<EOF>>  {return 0;}
 <BADSTRING>.    ;
-"true"      return T_TRUE;
-"false"     return T_FALSE;
-"boolean"   return T_BOOL;
-"int"       return T_INT;
-"void"      return T_VOID;
-"if"        return T_IF;
-"else"      return T_ELSE;
-"while"     return T_WHILE;
-"break"     return T_BREAK;
-"return"    return T_RETURN;
-"+"         return T_ADD;
-"-"         return T_SUB;
-"*"         return T_MULT;
-"/"         return T_DIV;
-"%"         return T_MOD;
-"<"         return T_LT;
-">"         return T_GT;
-"<="        return T_LE;
-">="        return T_GE;
-"="         return T_ASSIGN;
-"=="        return T_EQ;
-"!="        return T_NEQ;
-"!"         return T_NOT;
-"&&"        return T_AND;
-"||"        return T_OR;
-"("         return T_OPENPAR;
-")"         return T_CLOSEPAR;
-"{"         return T_OPENBRACE;
-"}"         return T_CLOSEBRACE;
-";"         return T_SEMICOLON;
-","         return T_COMMA;
-{ID}        {lexeme = std::string(YYText()); return T_ID;}
-{num}       {lexeme = std::string(YYText()); 
-             return T_NUM;}
+"true"      return Token::T_TRUE;
+"false"     return Token::T_FALSE;
+"boolean"   return Token::T_BOOL;
+"int"       return Token::T_INT;
+"void"      return Token::T_VOID;
+"if"        return Token::T_IF;
+"else"      return Token::T_ELSE;
+"while"     return Token::T_WHILE;
+"break"     return Token::T_BREAK;
+"return"    return Token::T_RETURN;
+"+"         return Token::T_ADD;
+"-"         return Token::T_SUB;
+"*"         return Token::T_MULT;
+"/"         return Token::T_DIV;
+"%"         return Token::T_MOD;
+"<"         return Token::T_LT;
+">"         return Token::T_GT;
+"<="        return Token::T_LE;
+">="        return Token::T_GE;
+"="         return Token::T_ASSIGN;
+"=="        return Token::T_EQ;
+"!="        return Token::T_NEQ;
+"!"         return Token::T_NOT;
+"&&"        return Token::T_AND;
+"||"        return Token::T_OR;
+"("         return Token::T_OPENPAR;
+")"         return Token::T_CLOSEPAR;
+"{"         return Token::T_OPENBRACE;
+"}"         return Token::T_CLOSEBRACE;
+";"         return Token::T_SEMICOLON;
+","         return Token::T_COMMA;
+{ID}        {yylval->strVal = new std::string(yytext);  return Token::T_ID;}
+{num}       {yylval->ival = std::stoi(yytext);          return Token::T_NUM;}
 .           {std::cerr << "WARNING: bad character around line " << lineno() << std::endl; 
              warnings++;
              linewarnings++;
@@ -100,13 +113,11 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 %% 
 
 /* User routines here*/
-
+std::unique_ptr<JCC::Lexer> createLexer(std::istream* input) {
+    return std::make_unique<JCC::Lexer>(input);
+}
 /* int yyFlexLexer::yywrap() { return 1; } */
 
-/* Creates and returns unique pointer to lexer */
-std::unique_ptr<CCLexer> createLexer(std::istream* input) {
-    return std::make_unique<CCLexer>(input);
-}
 /* Checks to see if the number of warnings in a line is > 10 */
 int checkWarnings() {
     if (linewarnings > 10) {
