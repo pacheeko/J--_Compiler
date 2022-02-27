@@ -34,7 +34,7 @@
 
     AST* root = nullptr;
     char* filename;
-    int b;
+    int a;
 }
 
 
@@ -79,7 +79,7 @@
 %token <strVal> FALSE "false"
 %token <strVal> BOOL "boolean"
 %token <strVal> INT "int"
-%token VOID "void"
+%token <strVal> VOID "void"
 %token IF "if"
 %token ELSE "else"
 %token WHILE "while"
@@ -96,8 +96,11 @@
 %type <decl> globaldeclaration
 %type <decl> globaldeclarations
 %type <vardecl> variabledeclaration
+%type <funcdecl> functiondeclarator
 %type <funcdecl> functiondeclaration
+%type <funcdecl> functionheader
 %type <strVal> type
+
 /* Define the start symbol */
 %start start
 
@@ -105,9 +108,9 @@
 %%
 start          : %empty {root = new Prog(filename);}
                | program {root = $1;}
+               ;
 
-program          : /* empty */   
-                | globaldeclarations {$$ = new Prog(filename); 
+program         : globaldeclarations {$$ = new Prog(filename); 
                                      $$->AddNode($1);
                                      if ($1->hasNext()){
                                             Decl* tmp = $1;
@@ -115,44 +118,43 @@ program          : /* empty */
                                                 tmp = tmp->getNext();
                                                 $$->AddNode(tmp);
                                             }
-                                        }
-                                        std::cout << "program" << std::endl;}
+                                        }}
                 ;   
 
-literal         : NUM {std::cout << std::to_string($1) << std::endl; } 
-                | STRING {std::cout << $1 << std::endl; } 
-                | TRUE {std::cout << $1 << std::endl; } 
-                | FALSE {std::cout << $1 << std::endl; } 
+literal         : NUM 
+                | STRING 
+                | TRUE 
+                | FALSE 
                 ;
 
-type            : BOOL  {$$ = $1; std::cout << $1 << std::endl;}
-                | INT   {$$ = $1; std::cout << $1 << std::endl;}
+type            : BOOL  {$$ = $1;}
+                | INT   {$$ = $1;}
                 ;
 
-globaldeclarations      : globaldeclaration {$$ = $1; std::cout << "global dec 2" << std::endl;}
+globaldeclarations      : globaldeclaration {$$ = $1;}
                         | globaldeclarations globaldeclaration  {$$ = $2; $$->setNext($1);}
                         ;
 
-globaldeclaration       : variabledeclaration   {std::cout << "Before: vardec2" << std::endl;$$ = $1; std::cout << "After: vardec2" << std::endl;}
+globaldeclaration       : variabledeclaration   {$$ = $1;}
                         | functiondeclaration   {$$ = $1;}
-                        | mainfunctiondeclaration   {$$ = $1; {std::cout << "global dec 1" << std::endl;}}
+                        | mainfunctiondeclaration   {$$ = $1;}
                         ;
 
 variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl($1->c_str(), $2->c_str()); }
                         ;
 
-identifier              : ID 
+identifier              : ID {$$ = $1;}
                         ;
 
-functiondeclaration     : functionheader block
+functiondeclaration     : functionheader block {$$ = $1;}
                         ;
 
-functionheader          : type functiondeclarator
-                        | VOID functiondeclarator
+functionheader          : type functiondeclarator {$$ = $2; $$->SetRT($1->c_str());}
+                        | VOID functiondeclarator {$$ = $2; $$->SetRT($1->c_str());}
                         ;
 
-functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR 
-                        | identifier OPENPAR CLOSEPAR
+functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl($1->c_str());}
+                        | identifier OPENPAR CLOSEPAR {$$ = new FuncDecl($1->c_str());}
                         ;
 
 formalparameterlist     : formalparameter
@@ -162,15 +164,14 @@ formalparameterlist     : formalparameter
 formalparameter         : type identifier
                         ;
 
-mainfunctiondeclaration : mainfunctiondeclarator block {std::cout << "mainfuncdeclaration" << std::endl;}
+mainfunctiondeclaration : mainfunctiondeclarator block
                         ;
 
-mainfunctiondeclarator  : identifier OPENPAR CLOSEPAR    {std::cout << "mainfuncdeclarator" << std::endl;
-                                                          $$ = new MainDecl($1->c_str()); }
+mainfunctiondeclarator  : identifier OPENPAR CLOSEPAR    {$$ = new MainDecl($1->c_str()); }
                         ;
 
-block                   : OPENBRACE blockstatements CLOSEBRACE {std::cout << "blockstatements done" << std::endl;}
-                        | OPENBRACE CLOSEBRACE  {std::cout << "no blocks" << std::endl;}
+block                   : OPENBRACE blockstatements CLOSEBRACE 
+                        | OPENBRACE CLOSEBRACE 
                         ;
 
 blockstatements         : blockstatement 
@@ -230,8 +231,8 @@ additiveexpression      : multiplicativeexpression
                         ;
 
 relationalexpression    : additiveexpression
-                        | relationalexpression LT additiveexpression
                         | relationalexpression GT additiveexpression
+                        | relationalexpression LT additiveexpression
                         | relationalexpression LE additiveexpression
                         | relationalexpression GE additiveexpression
                         ;
@@ -253,12 +254,12 @@ assignmentexpression    : conditionalorexpression
                         | assignment
                         ;
 
-assignment              : identifier ASSIGN assignmentexpression 
+assignment              : identifier ASSIGN assignmentexpression
                         ;
 
-expression              : assignmentexpression 
+expression              : assignmentexpression
                         ;
-
+   
 %%
 
 /* Parser will call this function when it fails to parse */
@@ -267,4 +268,3 @@ void JCC::Parser::error(const location_type &loc, const std::string &errmsg)
 {
    std::cerr << "Error: " << errmsg << " at " << loc << "\n";
 }
-

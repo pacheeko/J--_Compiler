@@ -85,11 +85,9 @@ class Prog : public AST
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Program: {'filename': " << prog_name << "}" << "\n";
         INDENTS++;
-        for (auto child : children)
+        for (int i = children.size(); i --> 0;)
         {   
-            std::cout << "before seg fault" << std::endl;
-            child->Print();
-            std::cout << "after seg fault" << std::endl;
+            children[i]->Print();
         }
         INDENTS--;
 
@@ -228,7 +226,7 @@ class MainDecl : public Decl
 
     void Print() override {
           std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Main Function Declaration: {'Name': " << name << "}" << "\n";
+        std::cout << "--Main Function Declaration: {'name': " << name << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -277,8 +275,8 @@ class VarDecl : public Decl
 class FuncDecl : public Decl
 {
     protected:
-    std::string name;
-    std::string return_type;
+    std::string name = "name";
+    std::string return_type = "rt";
 
     void AddChild(AST *child) override
     {
@@ -287,15 +285,20 @@ class FuncDecl : public Decl
     }
 
     public:
-    FuncDecl(const char* const id, const char* const rt) : name(id), return_type(rt) {};
+    FuncDecl() {};
+    FuncDecl(const char* const id) : name(std::string(id)) {};
 
     void AddNode(AST *node) override
     {
         AddChild(node);
     }
 
+    void SetRT(const char* const rt) {
+        return_type = std::string(rt);
+    }
+
     void Print() override {
-          std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Function Declaration {'return type': " << return_type << ", 'id': " << name << "}" << "\n";
         INDENTS++;
         for (auto child : children)

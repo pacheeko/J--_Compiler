@@ -69,7 +69,7 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 "false"     return Token::T_FALSE;
 "boolean"   {yylval->strVal = new std::string("bool"); return Token::T_BOOL;}
 "int"       {yylval->strVal = new std::string("int"); return Token::T_INT;}
-"void"      return Token::T_VOID;
+"void"      {yylval->strVal = new std::string("void"); return Token::T_VOID;}
 "if"        return Token::T_IF;
 "else"      return Token::T_ELSE;
 "while"     return Token::T_WHILE;
