@@ -34,6 +34,7 @@
 
     AST* root = nullptr;
     char* filename;
+    int b;
 }
 
 
@@ -72,8 +73,8 @@
 %token CLOSEPAR ")"
 %token <strVal> OPENBRACE "{"
 %token <strVal> CLOSEBRACE "}"
-%token SEMICOLON ";"
-%token COMMA ","
+%token <strVal> SEMICOLON ";"
+%token <strVal> COMMA ","
 %token <strVal> TRUE "true"
 %token <strVal> FALSE "false"
 %token <strVal> BOOL "boolean"
@@ -96,6 +97,7 @@
 %type <decl> globaldeclarations
 %type <vardecl> variabledeclaration
 %type <funcdecl> functiondeclaration
+%type <strVal> type
 /* Define the start symbol */
 %start start
 
@@ -105,9 +107,16 @@ start          : %empty {root = new Prog(filename);}
                | program {root = $1;}
 
 program          : /* empty */   
-                | globaldeclarations {$$ = new Prog(filename);
-                  std::cout << "program" << std::endl;
-                  $$->AddNode($1);}
+                | globaldeclarations {$$ = new Prog(filename); 
+                                     $$->AddNode($1);
+                                     if ($1->hasNext()){
+                                            Decl* tmp = $1;
+                                            while (tmp->hasNext()){
+                                                tmp = tmp->getNext();
+                                                $$->AddNode(tmp);
+                                            }
+                                        }
+                                        std::cout << "program" << std::endl;}
                 ;   
 
 literal         : NUM {std::cout << std::to_string($1) << std::endl; } 
@@ -116,23 +125,23 @@ literal         : NUM {std::cout << std::to_string($1) << std::endl; }
                 | FALSE {std::cout << $1 << std::endl; } 
                 ;
 
-type            : BOOL
-                | INT
+type            : BOOL  {$$ = $1; std::cout << $1 << std::endl;}
+                | INT   {$$ = $1; std::cout << $1 << std::endl;}
                 ;
 
-globaldeclarations      : globaldeclaration {$$ = $1; {std::cout << "global dec 2" << std::endl;}}
-                        | globaldeclarations globaldeclaration  {$$ = $1;}
+globaldeclarations      : globaldeclaration {$$ = $1; std::cout << "global dec 2" << std::endl;}
+                        | globaldeclarations globaldeclaration  {$$ = $2; $$->setNext($1);}
                         ;
 
-globaldeclaration       : variabledeclaration   {$$ = $1;}
+globaldeclaration       : variabledeclaration   {std::cout << "Before: vardec2" << std::endl;$$ = $1; std::cout << "After: vardec2" << std::endl;}
                         | functiondeclaration   {$$ = $1;}
                         | mainfunctiondeclaration   {$$ = $1; {std::cout << "global dec 1" << std::endl;}}
                         ;
 
-variabledeclaration     : type identifier SEMICOLON
+variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl($1->c_str(), $2->c_str()); }
                         ;
 
-identifier              : ID {std::cout << $1->c_str() << std::endl; } 
+identifier              : ID 
                         ;
 
 functiondeclaration     : functionheader block
@@ -142,7 +151,7 @@ functionheader          : type functiondeclarator
                         | VOID functiondeclarator
                         ;
 
-functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR
+functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR 
                         | identifier OPENPAR CLOSEPAR
                         ;
 
@@ -164,7 +173,7 @@ block                   : OPENBRACE blockstatements CLOSEBRACE {std::cout << "bl
                         | OPENBRACE CLOSEBRACE  {std::cout << "no blocks" << std::endl;}
                         ;
 
-blockstatements         : blockstatement
+blockstatements         : blockstatement 
                         | blockstatements blockstatement
                         ;
 

@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     std::cout << "Parse Complete! Printing AST..." << std::endl;
+    std::cout << root->numChildren() << std::endl;
     root->Print();
 
     return 0;

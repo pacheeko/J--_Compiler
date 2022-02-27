@@ -67,8 +67,8 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 <BADSTRING>.    ;
 "true"      return Token::T_TRUE;
 "false"     return Token::T_FALSE;
-"boolean"   return Token::T_BOOL;
-"int"       return Token::T_INT;
+"boolean"   {yylval->strVal = new std::string("bool"); return Token::T_BOOL;}
+"int"       {yylval->strVal = new std::string("int"); return Token::T_INT;}
 "void"      return Token::T_VOID;
 "if"        return Token::T_IF;
 "else"      return Token::T_ELSE;
