@@ -21,13 +21,12 @@ class AST;
 
     class Exp;
         class Id;
-        class CondId;
         class Num;
-        class Times;
-        class Plus;
-        //class Actuals;
-        //class FuncCall;
+        class Literal;
+        class Arithmetic;
         class Compare;
+        class Logical;
+        class FuncCall;
 
     class Decl;
         class MainDecl;
@@ -704,6 +703,36 @@ class Num : public Exp {
     }
 };
 
+class Literal : public Exp {
+  protected:
+    std::string value;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+  public:
+    Literal(const char* const val) : value(val) {}
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Literal {'value': " << value << "}" << "\n";
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
+};
+
 class Id : public Exp {
   protected:
     std::string id;
@@ -714,47 +743,38 @@ class Id : public Exp {
 
     }
 
+    Exp* next;
+
   public:
     Id(const char* const value) : id(std::string(value)) {}
+
+    bool hasNext() {
+        if (next != NULL) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    void setNext(Exp *node) {
+        next = node;
+    }
+
+    Exp * getNext() {
+        return next;
+    }
 
     void AddNode(AST *node) override
     {
         AddChild(node);
     }
+
+
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Id {'name': " << id << "}" << "\n";
-        INDENTS++;
-        for (auto child : children)
-        {
-            child->Print();
-        }
-        INDENTS--;
-    }
-};
-
-class CondId : public Exp {
-  protected:
-    std::string id;
-
-    void AddChild(AST *child) override
-    {
-        children.push_back(child);
-
-    }
-
-  public:
-    CondId(const char* const value) : id(std::string(value)) {}
-
-    void AddNode(AST *node) override
-    {
-        AddChild(node);
-    }
-
-    void Print() override {
-        std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Conditional Id {'name': " << id << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -774,8 +794,11 @@ class Compare : public Exp {
 
     }
 
+    Exp * before;
+    Exp * after;
+
   public:
-    Compare(const char* const value) : type(std::string(value)) {}
+    Compare(const char* const value, Exp* b, Exp* a) : type(std::string(value)), before(b), after(a) {}
 
     void AddNode(AST *node) override
     {
@@ -784,8 +807,12 @@ class Compare : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Comparator {'type': " << type << " }" << "\n";
+        std::cout << "--Comparison operator {'type': " << type << " }" << "\n";
         INDENTS++;
+        std::cout << std::string(INDENTS*2, INDENT_CHAR) << "Before operator:\n";
+        before->Print();
+        std::cout << std::string(INDENTS*2, INDENT_CHAR) << "After operator:\n";
+        after->Print();
         for (auto child : children)
         {
             child->Print();
@@ -794,22 +821,114 @@ class Compare : public Exp {
     }
 };
 
-class Plus : public Exp {
+class Arithmetic : public Exp {
   protected:
-    Exp *left;
-    Exp *right;
+    std::string type;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    Exp * before;
+    Exp * after;
 
   public:
-    Plus(Exp *L, Exp *R): left(L), right(R) {}
+    Arithmetic(const char* const value, Exp* a) : type(std::string(value)), after(a) {}
+    Arithmetic(const char* const value, Exp* b, Exp*a) : type(std::string(value)), before(b), after(a) {}
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Arithmetic operator {'type': " << type << " }" << "\n";
+        INDENTS++;
+        if (before != NULL) {
+            std::cout << std::string(INDENTS*2, INDENT_CHAR) << "Before operator:\n";
+            before->Print();
+        }
+        std::cout << std::string(INDENTS*2, INDENT_CHAR) << "After operator:\n";
+        after->Print();
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
 };
 
-class Times : public Exp {
+class Logical : public Exp {
   protected:
-    Exp *left;
-    Exp *right;
+    std::string type;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    Exp * before;
+    Exp * after;
 
   public:
-    Times(Exp *L, Exp *R): left(L), right(R) {}
+    Logical(const char* const value, Exp* a) : type(std::string(value)), after(a) {}
+    Logical(const char* const value, Exp* b, Exp*a) : type(std::string(value)), before(b), after(a) {}
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Logical operator {'type': " << type << " }" << "\n";
+        INDENTS++;
+        if (before != NULL) {
+            std::cout << std::string(INDENTS*2, INDENT_CHAR) << "Before operator:\n";
+            before->Print();
+        }
+        std::cout << std::string(INDENTS*2, INDENT_CHAR) << "After operator:\n";
+        after->Print();
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
 };
 
+class FuncCall : public Exp {
+  protected:
+    std::string id;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+  public:
+    FuncCall(const char* const value) : id(std::string(value)) {}
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Function Invocation {'name': " << id << "}" << "\n";
+        INDENTS++;
+        std::cout << std::string(INDENTS*2, INDENT_CHAR) << "Arguments:\n";
+        for (int i = children.size(); i --> 0;)
+        {
+            children[i]->Print();
+        }
+        INDENTS--;
+    }
+};
 #endif

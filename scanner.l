@@ -1,6 +1,7 @@
 %option c++
 %option yyclass="JCC::Lexer"
 %option noyywrap
+%option yylineno
 
 /* Declarations */
 %{
@@ -56,17 +57,17 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 <COMMENT>\n   {BEGIN(INITIAL);}
 <COMMENT><<EOF>> {return 0;}
 <COMMENT>.    ;
-\"              {BEGIN(STRING);}  
+\"              {BEGIN(STRING); yymore();}  
 <STRING>(\\\b|\\\f|\\\t|\\\r|\\\n|\\\'|\\\"|\\\\|\\\0)    {yymore();}
-<STRING>\"      {BEGIN(INITIAL); std::cout << "string here" << std::endl; return Token::T_STRING;}
+<STRING>\"      {yylval->strVal = new std::string(yytext); BEGIN(INITIAL); return Token::T_STRING;}
 <STRING>\n      {std::cerr << "ERROR: newline in string at line " << lineno() << std::endl; warnings++; linewarnings++; BEGIN(BADSTRING);}
 <STRING><<EOF>> {std::cerr << "ERROR: string literal opened but never closed at line " << lineno() << std::endl; warnings++; linewarnings++; return 0;}
-<STRING>.       {}
+<STRING>.       {yymore();}
 <BADSTRING>\"   {BEGIN(INITIAL);}
 <BADSTRING><<EOF>>  {return 0;}
 <BADSTRING>.    ;
-"true"      return Token::T_TRUE;
-"false"     return Token::T_FALSE;
+"true"      {yylval->strVal = new std::string("true"); return Token::T_TRUE;}
+"false"     {yylval->strVal = new std::string("false"); return Token::T_FALSE;}
 "boolean"   {yylval->strVal = new std::string("boolean"); return Token::T_BOOL;}
 "int"       {yylval->strVal = new std::string("int"); return Token::T_INT;}
 "void"      {yylval->strVal = new std::string("void"); return Token::T_VOID;}
@@ -84,7 +85,7 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 ">"         {yylval->strVal = new std::string(">"); return Token::T_GT;}
 "<="        {yylval->strVal = new std::string("<="); return Token::T_LE;}
 ">="        {yylval->strVal = new std::string(">="); return Token::T_GE;}
-"="         return Token::T_ASSIGN;
+"="         {yylval->strVal = new std::string("="); return Token::T_ASSIGN;}
 "=="        {yylval->strVal = new std::string("=="); return Token::T_EQ;}
 "!="        {yylval->strVal = new std::string("!="); return Token::T_NEQ;}
 "!"         {yylval->strVal = new std::string("!"); return Token::T_NOT;}

@@ -1,0 +1,48 @@
+int a;
+boolean b;
+
+main() {
+    int i;
+    func(a,b,c);
+}
+
+notmain() {
+    int var;
+}
+
+int func(int c, boolean d, int e, int f) {
+
+    if (5 != 6) {
+        c = 5 + 6;
+        break;
+    }
+    return 5 != 6;
+}
+
+boolean func2(boolean g, int h, boolean test, boolean test4) {
+
+    while(true) {
+        if ("this is a string") {
+            prints("Print this string.");
+            return;
+        } else {
+            prints("another string");
+
+        }
+    }
+}
+
+void func3(int i) {
+    boolean var;
+    int number;
+    var = 5 > 4 || 2 == 3; 
+    number = -1;
+    var = !(5 == 5);
+}
+
+void func4() {
+    x = !(5 + 4);
+    y = (true && false) || (true && (false || false));
+    ;
+    x = true;
+}

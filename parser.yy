@@ -34,7 +34,6 @@
 
     AST* root = nullptr;
     char* filename;
-    int a;
 }
 
 
@@ -54,7 +53,6 @@
     Param *param;
     Block *block;
     Id *id;
-    CondId *condid;
 };
 
 %token <strVal> ADD "+"
@@ -106,8 +104,8 @@
 %type <param> formalparameter
 %type <decl> formalparameterlist
 %type <stmt> block
-%type <block> blockstatement
-%type <block> blockstatements
+%type <stmt> blockstatement
+%type <stmt> blockstatements
 %type <stmt> statement
 %type <stmt> statementexpression
 %type <exp> expression
@@ -118,6 +116,13 @@
 %type <exp> literal
 %type <exp> relationalexpression
 %type <exp> additiveexpression
+%type <exp> multiplicativeexpression
+%type <exp> unaryexpression
+%type <exp> conditionalandexpression
+%type <exp> conditionalorexpression
+%type <exp> argumentlist
+%type <exp> functioninvocation
+%type <exp> primary
 
 /* Define the start symbol */
 %start start
@@ -141,13 +146,13 @@ program         : globaldeclarations {$$ = new Prog(filename);
                                         }}
                 ;   
 
-literal         : NUM {std::cout << "Num: " << $1 << std::endl; $$ = new Num($1);}
-                | STRING 
-                | TRUE 
-                | FALSE 
+literal         : NUM {$$ = new Num($1);}
+                | STRING {$$ = new Literal($1->c_str());}
+                | TRUE {$$ = new Literal($1->c_str());}
+                | FALSE {$$ = new Literal($1->c_str());}
                 ;
 
-type            : BOOL  
+type            : BOOL  {}
                 | INT   
                 ;
 
@@ -225,7 +230,7 @@ statement               : block {$$ = $1;}
                         | RETURN expression SEMICOLON {$$ = new RetStmt(); $$->AddNode($2);}
                         | RETURN SEMICOLON {$$ = new RetStmt();}
                         | IF OPENPAR expression CLOSEPAR statement {$$ = new IfStmt(); $$->AddNode($3); $$->AddNode($5);}
-                        | IF OPENPAR expression CLOSEPAR statement ELSE statement {$$ = new IfStmt(); $$->AddNode($3); $$->AddNode($5); ElseStmt* es = new ElseStmt(); es->AddNode($7);}
+                        | IF OPENPAR expression CLOSEPAR statement ELSE statement {$$ = new IfStmt(); $$->AddNode($3); $$->AddNode($5); ElseStmt* es = new ElseStmt(); es->AddNode($7); $$->AddNode(es);}
                         | WHILE OPENPAR expression CLOSEPAR statement {$$ = new WhileStmt(); $$->AddNode($3); $$->AddNode($5);}
                         ;
 
@@ -234,56 +239,64 @@ statementexpression     : assignment
                         ;
 
 primary                 : literal
-                        | OPENPAR expression CLOSEPAR
+                        | OPENPAR expression CLOSEPAR {$$ = $2;}
                         | functioninvocation
                         ;
 
 argumentlist            : expression
-                        | argumentlist COMMA expression
+                        | argumentlist COMMA expression {$$ = $3; $$->setNext($1);}
                         ;
 
-functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR
-                        | identifier OPENPAR CLOSEPAR
+functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR {$$ = new FuncCall($1->c_str()); 
+                                                                    $$->AddNode($3);
+                                                                    if ($3->hasNext()){
+                                                                        Exp* tmp = $3;
+                                                                        while (tmp->hasNext()){
+                                                                            tmp = tmp->getNext();
+                                                                            $$->AddNode(tmp);
+                                                                        }
+                                                                    }}
+                        | identifier OPENPAR CLOSEPAR   {$$ = new FuncCall($1->c_str());}
                         ;
 
-postfixexpression       : primary
-                        | identifier {$$ = new CondId($1->c_str());}
+postfixexpression       : primary 
+                        | identifier {$$ = new Id($1->c_str());}
                         ;
 
-unaryexpression         : SUB unaryexpression
-                        | NOT unaryexpression
-                        | postfixexpression
+unaryexpression         : SUB unaryexpression {$$ = new Arithmetic($1->c_str(), $2);}
+                        | NOT unaryexpression {$$ = new Logical($1->c_str(), $2);}  
+                        | postfixexpression {}
                         ;
 
 multiplicativeexpression: unaryexpression
-                        | multiplicativeexpression MULT unaryexpression
-                        | multiplicativeexpression DIV unaryexpression
-                        | multiplicativeexpression MOD unaryexpression
+                        | multiplicativeexpression MULT unaryexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
+                        | multiplicativeexpression DIV unaryexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
+                        | multiplicativeexpression MOD unaryexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
                         ;
 
 additiveexpression      : multiplicativeexpression
-                        | additiveexpression ADD multiplicativeexpression {}
-                        | additiveexpression SUB multiplicativeexpression
+                        | additiveexpression ADD multiplicativeexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
+                        | additiveexpression SUB multiplicativeexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
                         ;
 
 relationalexpression    : additiveexpression
-                        | relationalexpression GT additiveexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
-                        | relationalexpression LT additiveexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
-                        | relationalexpression LE additiveexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
-                        | relationalexpression GE additiveexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
+                        | relationalexpression GT additiveexpression {$$ = new Compare($2->c_str(), $1, $3);}
+                        | relationalexpression LT additiveexpression {$$ = new Compare($2->c_str(), $1, $3);}
+                        | relationalexpression LE additiveexpression {$$ = new Compare($2->c_str(), $1, $3);}
+                        | relationalexpression GE additiveexpression {$$ = new Compare($2->c_str(), $1, $3);}
                         ;
 
 equalityexpression      : relationalexpression
-                        | equalityexpression EQ relationalexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
-                        | equalityexpression NEQ relationalexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
+                        | equalityexpression EQ relationalexpression {$$ = new Compare($2->c_str(), $1, $3);}
+                        | equalityexpression NEQ relationalexpression {$$ = new Compare($2->c_str(), $1, $3);}
                         ;
 
 conditionalandexpression: equalityexpression
-                        | conditionalandexpression AND equalityexpression
+                        | conditionalandexpression AND equalityexpression {$$ = new Logical($2->c_str(), $1, $3);}
                         ;
 
 conditionalorexpression : conditionalandexpression
-                        | conditionalorexpression OR conditionalandexpression
+                        | conditionalorexpression OR conditionalandexpression {$$ = new Logical($2->c_str(), $1, $3);}
                         ;
 
 assignmentexpression    : conditionalorexpression 
