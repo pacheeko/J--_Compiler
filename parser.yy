@@ -51,26 +51,29 @@
     MainDecl *maindecl;
     VarDecl *vardecl;
     FuncDecl *funcdecl;
-
+    Param *param;
+    Block *block;
+    Id *id;
+    CondId *condid;
 };
 
-%token ADD "+"
-%token SUB "-"
-%token DIV "/"
-%token MULT "*"
-%token MOD "%"
-%token LT "<"
-%token GT ">"
-%token LE "<="
-%token GE ">="
-%token EQ "=="
-%token NEQ "!="
-%token NOT "!"
-%token AND "&&"
-%token OR "||"
-%token ASSIGN "="
-%token OPENPAR "("
-%token CLOSEPAR ")"
+%token <strVal> ADD "+"
+%token <strVal> SUB "-"
+%token <strVal> DIV "/"
+%token <strVal> MULT "*"
+%token <strVal> MOD "%"
+%token <strVal> LT "<"
+%token <strVal> GT ">"
+%token <strVal> LE "<="
+%token <strVal> GE ">="
+%token <strVal> EQ "=="
+%token <strVal> NEQ "!="
+%token <strVal> NOT "!"
+%token <strVal> AND "&&"
+%token <strVal> OR "||"
+%token <strVal> ASSIGN "="
+%token <strVal> OPENPAR "("
+%token <strVal> CLOSEPAR ")"
 %token <strVal> OPENBRACE "{"
 %token <strVal> CLOSEBRACE "}"
 %token <strVal> SEMICOLON ";"
@@ -80,11 +83,11 @@
 %token <strVal> BOOL "boolean"
 %token <strVal> INT "int"
 %token <strVal> VOID "void"
-%token IF "if"
-%token ELSE "else"
-%token WHILE "while"
-%token BREAK "break"
-%token RETURN "return"
+%token <strVal> IF "if"
+%token <strVal> ELSE "else"
+%token <strVal> WHILE "while"
+%token <strVal> BREAK "break"
+%token <strVal> RETURN "return"
 %token <strVal> STRING "string"
 %token <strVal> ID "id"
 %token <ival> NUM "number"
@@ -100,10 +103,27 @@
 %type <funcdecl> functiondeclaration
 %type <funcdecl> functionheader
 %type <strVal> type
+%type <param> formalparameter
+%type <decl> formalparameterlist
+%type <stmt> block
+%type <block> blockstatement
+%type <block> blockstatements
+%type <stmt> statement
+%type <stmt> statementexpression
+%type <exp> expression
+%type <exp> equalityexpression
+%type <stmt> assignment
+%type <exp> assignmentexpression
+%type <exp> postfixexpression
+%type <exp> literal
+%type <exp> relationalexpression
+%type <exp> additiveexpression
 
 /* Define the start symbol */
 %start start
 
+/* Left associativity */
+%left "+" "-" "*" "/";
 
 %%
 start          : %empty {root = new Prog(filename);}
@@ -121,14 +141,14 @@ program         : globaldeclarations {$$ = new Prog(filename);
                                         }}
                 ;   
 
-literal         : NUM 
+literal         : NUM {std::cout << "Num: " << $1 << std::endl; $$ = new Num($1);}
                 | STRING 
                 | TRUE 
                 | FALSE 
                 ;
 
-type            : BOOL  {$$ = $1;}
-                | INT   {$$ = $1;}
+type            : BOOL  
+                | INT   
                 ;
 
 globaldeclarations      : globaldeclaration {$$ = $1;}
@@ -146,55 +166,71 @@ variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl($1->c_str(
 identifier              : ID {$$ = $1;}
                         ;
 
-functiondeclaration     : functionheader block {$$ = $1;}
+functiondeclaration     : functionheader block {$$ = $1; $$->AddNode($2);}
                         ;
 
 functionheader          : type functiondeclarator {$$ = $2; $$->SetRT($1->c_str());}
                         | VOID functiondeclarator {$$ = $2; $$->SetRT($1->c_str());}
                         ;
 
-functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl($1->c_str());}
+functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl($1->c_str());
+                                                                            $$->AddNode($3);
+                                                                            if ($3->hasNext()){
+                                                                                Decl* tmp = $3;
+                                                                                while (tmp->hasNext()){
+                                                                                    tmp = tmp->getNext();
+                                                                                    $$->AddNode(tmp);
+                                                                                }
+                                                                            } }
                         | identifier OPENPAR CLOSEPAR {$$ = new FuncDecl($1->c_str());}
                         ;
 
-formalparameterlist     : formalparameter
-                        | formalparameterlist COMMA formalparameter
+formalparameterlist     : formalparameter   {$$ = $1; }
+                        | formalparameterlist COMMA formalparameter {$$ = $3; $$->setNext($1);}
                         ;
 
-formalparameter         : type identifier
+formalparameter         : type identifier {$$ = new Param($1->c_str(), $2->c_str());}
                         ;
 
-mainfunctiondeclaration : mainfunctiondeclarator block
+mainfunctiondeclaration : mainfunctiondeclarator block {$$ = $1; $$->AddNode($2);}
                         ;
 
 mainfunctiondeclarator  : identifier OPENPAR CLOSEPAR    {$$ = new MainDecl($1->c_str()); }
                         ;
 
-block                   : OPENBRACE blockstatements CLOSEBRACE 
-                        | OPENBRACE CLOSEBRACE 
+block                   : OPENBRACE blockstatements CLOSEBRACE {$$ = new Block();
+                                                                $$->AddNode($2);
+                                                                if ($2->hasNext()){
+                                                                    Stmt* tmp = $2;
+                                                                    while (tmp->hasNext()){
+                                                                        tmp = tmp->getNext();
+                                                                        $$->AddNode(tmp);
+                                                                    }
+                                                                } }
+                        | OPENBRACE CLOSEBRACE                  {$$ = new Block();}
                         ;
 
-blockstatements         : blockstatement 
-                        | blockstatements blockstatement
+blockstatements         : blockstatement {$$ = $1; }    
+                        | blockstatements blockstatement {$$ = $2; $$->setNext($1);}
                         ;
 
-blockstatement          : variabledeclaration
-                        | statement
+blockstatement          : variabledeclaration 
+                        | statement 
                         ;
 
-statement               : block
-                        | SEMICOLON
+statement               : block {$$ = $1;}
+                        | SEMICOLON {$$ = new NullStmt();}
                         | statementexpression SEMICOLON
-                        | BREAK SEMICOLON
-                        | RETURN expression SEMICOLON
-                        | RETURN SEMICOLON
-                        | IF OPENPAR expression CLOSEPAR statement
-                        | IF OPENPAR expression CLOSEPAR statement ELSE statement
-                        | WHILE OPENPAR expression CLOSEPAR statement
+                        | BREAK SEMICOLON {$$ = new BreakStmt();}
+                        | RETURN expression SEMICOLON {$$ = new RetStmt(); $$->AddNode($2);}
+                        | RETURN SEMICOLON {$$ = new RetStmt();}
+                        | IF OPENPAR expression CLOSEPAR statement {$$ = new IfStmt(); $$->AddNode($3); $$->AddNode($5);}
+                        | IF OPENPAR expression CLOSEPAR statement ELSE statement {$$ = new IfStmt(); $$->AddNode($3); $$->AddNode($5); ElseStmt* es = new ElseStmt(); es->AddNode($7);}
+                        | WHILE OPENPAR expression CLOSEPAR statement {$$ = new WhileStmt(); $$->AddNode($3); $$->AddNode($5);}
                         ;
 
-statementexpression     : assignment
-                        | functioninvocation
+statementexpression     : assignment 
+                        | functioninvocation 
                         ;
 
 primary                 : literal
@@ -211,7 +247,7 @@ functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR
                         ;
 
 postfixexpression       : primary
-                        | identifier
+                        | identifier {$$ = new CondId($1->c_str());}
                         ;
 
 unaryexpression         : SUB unaryexpression
@@ -226,20 +262,20 @@ multiplicativeexpression: unaryexpression
                         ;
 
 additiveexpression      : multiplicativeexpression
-                        | additiveexpression ADD multiplicativeexpression
+                        | additiveexpression ADD multiplicativeexpression {}
                         | additiveexpression SUB multiplicativeexpression
                         ;
 
 relationalexpression    : additiveexpression
-                        | relationalexpression GT additiveexpression
-                        | relationalexpression LT additiveexpression
-                        | relationalexpression LE additiveexpression
-                        | relationalexpression GE additiveexpression
+                        | relationalexpression GT additiveexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
+                        | relationalexpression LT additiveexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
+                        | relationalexpression LE additiveexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
+                        | relationalexpression GE additiveexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
                         ;
 
 equalityexpression      : relationalexpression
-                        | equalityexpression EQ relationalexpression
-                        | equalityexpression NEQ relationalexpression
+                        | equalityexpression EQ relationalexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
+                        | equalityexpression NEQ relationalexpression {$$ = new Compare($2->c_str()), $$->AddNode($1), $$->AddNode($3);}
                         ;
 
 conditionalandexpression: equalityexpression
@@ -250,11 +286,11 @@ conditionalorexpression : conditionalandexpression
                         | conditionalorexpression OR conditionalandexpression
                         ;
 
-assignmentexpression    : conditionalorexpression
+assignmentexpression    : conditionalorexpression 
                         | assignment
                         ;
 
-assignment              : identifier ASSIGN assignmentexpression
+assignment              : identifier ASSIGN assignmentexpression {$$ = new AssnStmt($1->c_str()); $$->AddNode($3); }
                         ;
 
 expression              : assignmentexpression

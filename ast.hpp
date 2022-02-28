@@ -10,27 +10,30 @@ class AST;
     class Prog;
 
     class Stmt;
-        //class Block;
-        //class IfStmt;
+        class Block;
+        class IfStmt;
+        class ElseStmt;
         class AssnStmt;
-        //class NullStmt;
-        //class RetStmt;
-        //class BreakStmt;
-        //class WhileStmt;
+        class NullStmt;
+        class RetStmt;
+        class BreakStmt;
+        class WhileStmt;
 
     class Exp;
         class Id;
+        class CondId;
         class Num;
         class Times;
         class Plus;
         //class Actuals;
         //class FuncCall;
+        class Compare;
 
     class Decl;
         class MainDecl;
         class FuncDecl;
         class VarDecl;
-        //class Param;
+        class Param;
 
 class AST
 {
@@ -102,7 +105,26 @@ class Stmt : public AST{
 
     }
 
+    Stmt* next;
+
     public:
+
+    bool hasNext() {
+        if (next != NULL) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    void setNext(Stmt *node) {
+        next = node;
+    }
+
+    Stmt * getNext() {
+        return next;
+    }
 
     void AddNode(AST *node) override
     {
@@ -122,7 +144,177 @@ class Stmt : public AST{
     }
 };
 
+class IfStmt : public Stmt {
+
+    protected:
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    std::string conditional;
+
+    public:
+    IfStmt() {};
+    IfStmt(const char* const elseStmt) : conditional(elseStmt) {};
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override
+    {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--If Statement {}: " << "\n" ;
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
+};
+
+class ElseStmt : public Stmt {
+
+    protected:
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    std::string conditional;
+
+    public:
+    ElseStmt() {};
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override
+    {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Else Statement {}: " << "\n";
+        INDENTS++;
+        for (int i = children.size(); i --> 0;)
+        {
+            children[i]->Print();
+        }
+        INDENTS--;
+    }
+};
+
+class WhileStmt : public Stmt {
+
+    protected:
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    std::string conditional;
+
+    public:
+    WhileStmt() {};
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override
+    {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--While Statement {}: " << "\n";
+        INDENTS++;
+        for (auto child :children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
+};
+
+class Block : public Stmt {
+
+    protected:
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    public:
+    Block() {};
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override
+    {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        if (children.empty()) {
+            std::cout << "--Block: Empty" << "\n";
+        } 
+        else {
+            std::cout << "--Block: " << "\n";
+        }
+        INDENTS++;
+        for (int i = children.size(); i --> 0;)
+        {
+            children[i]->Print();
+        }
+        INDENTS--;
+    }
+};
+
 class AssnStmt : public Stmt {
+
+    protected:
+
+    std::string identifier;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    public:
+
+    AssnStmt(const char* const id) : identifier(id) {};
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override
+    {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Assign Statement {'Id': " << identifier << "}" << "\n";
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
+};
+
+class NullStmt : public Stmt {
 
     protected:
 
@@ -137,7 +329,7 @@ class AssnStmt : public Stmt {
 
     public:
 
-    AssnStmt(const char* const id, const char* const assn) : identifier(id), assignment(assn) {};
+    NullStmt() {};
 
     void AddNode(AST *node) override
     {
@@ -147,6 +339,7 @@ class AssnStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Null Statement {}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -156,6 +349,75 @@ class AssnStmt : public Stmt {
     }
 };
 
+class BreakStmt : public Stmt {
+
+    protected:
+
+    std::string identifier;
+    std::string assignment;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    public:
+
+    BreakStmt() {};
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override
+    {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Break Statement {}" << "\n";
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
+};
+
+class RetStmt : public Stmt {
+
+    protected:
+
+    std::string identifier;
+    std::string assignment;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    public:
+
+    RetStmt() {};
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override
+    {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Return Statement {}" << "\n";
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
+};
 
 class Decl : public AST{
     protected:
@@ -196,9 +458,9 @@ class Decl : public AST{
         std::cout << "test" << std::endl;
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         INDENTS++;
-        for (auto child : children)
+        for (int i = children.size(); i --> 0;)
         {
-            child->Print();
+            children[i]->Print();
         }
         INDENTS--;
 
@@ -285,7 +547,6 @@ class FuncDecl : public Decl
     }
 
     public:
-    FuncDecl() {};
     FuncDecl(const char* const id) : name(std::string(id)) {};
 
     void AddNode(AST *node) override
@@ -309,17 +570,137 @@ class FuncDecl : public Decl
     }
 };
 
+class Param : public Decl
+{
+    protected:
+    std::string name = "name";
+    std::string type = "type";
+
+    Param* next;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    public:
+    Param(const char* const t, const char* const id) : name(std::string(id)), type(std::string(t)) {};
+
+    bool hasNext() {
+        if (next != NULL) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    std::string GetName() {
+        return name;
+    }
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void SetNext(Param * n) {
+        next = n;
+    }
+
+    Param* GetNext() {
+        return next;
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Formal Parameter {'type': " << type << ", 'id': " << name << "}" << "\n";
+        INDENTS++;
+        for (int i = children.size(); i --> 0;)
+        {
+            children[i]->Print();
+        }
+        INDENTS--;
+    }
+};
+
 class Exp : public AST {
 
+    protected:
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+    Exp * next;
+
+    public:
+
+    bool hasNext() {
+        if (next != NULL) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    void setNext(Exp *node) {
+        next = node;
+    }
+
+    Exp * getNext() {
+        return next;
+    }
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override
+    {
+        std::cout << "--Exp {}" << std::endl;
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        INDENTS++;
+        for (int i = children.size(); i --> 0;)
+        {
+            children[i]->Print();
+        }
+        INDENTS--;
+
+    }
 };
 
 class Num : public Exp {
   protected:
-    int num; 
+    int value;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
 
   public:
-    Num(float value) {
-      num = value;
+    Num(int val) : value(val) {}
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Num {'value': " << value << "}" << "\n";
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
     }
 };
 
@@ -327,8 +708,90 @@ class Id : public Exp {
   protected:
     std::string id;
 
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
   public:
-    Id(std::string value) : id(value) {}
+    Id(const char* const value) : id(std::string(value)) {}
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Id {'name': " << id << "}" << "\n";
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
+};
+
+class CondId : public Exp {
+  protected:
+    std::string id;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+  public:
+    CondId(const char* const value) : id(std::string(value)) {}
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Conditional Id {'name': " << id << "}" << "\n";
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
+};
+
+class Compare : public Exp {
+  protected:
+    std::string type;
+
+    void AddChild(AST *child) override
+    {
+        children.push_back(child);
+
+    }
+
+  public:
+    Compare(const char* const value) : type(std::string(value)) {}
+
+    void AddNode(AST *node) override
+    {
+        AddChild(node);
+    }
+
+    void Print() override {
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Comparator {'type': " << type << " }" << "\n";
+        INDENTS++;
+        for (auto child : children)
+        {
+            child->Print();
+        }
+        INDENTS--;
+    }
 };
 
 class Plus : public Exp {
