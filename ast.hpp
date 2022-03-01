@@ -6,8 +6,16 @@
 #define INDENT_CHAR ' '
 extern int INDENTS;
 
+/*
+AST is an abstract class with a three tiered heirarchy of subclasses
+Each class represents a node in the abstract syntax tree that is created when
+the parser is run. Each class has a print function that is called recursively 
+once the parser has finished.
+
+***The skeleton of the class was taken from Shankar Ganesh tutorial ***
+*/
 class AST;
-    class Prog;
+    class Prog; //Each AST will contain exactly one Prog node, which acts as the root of the tree
 
     class Stmt;
         class Block;

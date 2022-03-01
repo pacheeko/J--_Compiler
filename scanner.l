@@ -7,23 +7,15 @@
 %{
     #include <iostream>
     #include <fstream>
-    #include "scanner.hpp"
     #include "parser.hh"
+    #include "scanner.hpp"
     #include "vector"
     
-    // The token this time is in the parser class
-    // If no namespace and class is used, then the default is yy::Parser::token
     using Token = JCC::Parser::token;
 
-    // Should have this if you're using C++
-    // Defines yylex with parameters. Flex will produce this function.
-    // semantic_type is YYSTYPE, the union defined in bison. 
     #undef  YY_DECL
     #define YY_DECL int JCC::Lexer::yylex(JCC::Parser::semantic_type *yylval, JCC::Parser::location_type *loc)
 
-    // Everytime yylex is called, the location is updated for a token
-    // loc->step() sets the begin character for the token. 
-    // And loc->columns sets the number of characters for the token
     #define YY_USER_ACTION loc->step(); loc->columns(yyleng);
 
     double num;

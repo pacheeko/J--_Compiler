@@ -32,6 +32,7 @@
     #undef yylex
     #define yylex lexer->yylex
 
+    // Variables used to print out information about the abstract syntax tree
     AST* root = nullptr;
     char* filename;
 }
@@ -130,11 +131,15 @@
 /* Left associativity */
 %left "+" "-" "*" "/";
 
+/* *** Grammer taken from CPSC 411 d2l page *** */
 %%
 start          : %empty {root = new Prog(filename);}
                | program {root = $1;}
                ;
-
+/* 
+Only one program node for the abstract syntax tree 
+Each global declaration is a child of the program node
+   */
 program         : globaldeclarations {$$ = new Prog(filename); 
                                      $$->AddNode($1);
                                      if ($1->hasNext()){
@@ -146,13 +151,14 @@ program         : globaldeclarations {$$ = new Prog(filename);
                                         }}
                 ;   
 
+
 literal         : NUM {$$ = new Num($1);}
                 | STRING {$$ = new Literal($1->c_str());}
                 | TRUE {$$ = new Literal($1->c_str());}
                 | FALSE {$$ = new Literal($1->c_str());}
                 ;
 
-type            : BOOL  {}
+type            : BOOL
                 | INT   
                 ;
 
@@ -312,7 +318,6 @@ expression              : assignmentexpression
 %%
 
 /* Parser will call this function when it fails to parse */
-/* Tip: You can store the current token in the lexer to output meaningful error messages */
 void JCC::Parser::error(const location_type &loc, const std::string &errmsg)
 {
    std::cerr << "Error: " << errmsg << " at " << loc << "\n";

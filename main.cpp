@@ -1,10 +1,6 @@
 /********************************
- * Example C++ Parser
- * Written for CPSC 411 Tutorial
- * File: scanner.cpp
- * Shankar Ganesh
+ * Code modified from Shankar Ganesh tutorial code
  * *****************************/
-
 
 #include <cstdlib>
 #include <cerrno>
@@ -49,8 +45,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     std::cout << "Parse Complete! Printing AST..." << std::endl;
-    std::cout << root->numChildren() << std::endl;
-    root->Print();
+    root->Print();  //Prints out the entire abstract syntax tree
 
     return 0;
 }
