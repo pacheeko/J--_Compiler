@@ -10,7 +10,7 @@ extern int INDENTS;
 enum Oper : uint8_t { ADD, SUB, DIV, MULT, MOD, LT, GT, LE, GE, EQ, NEQ, NOT, AND, OR};
 enum Reserved : uint8_t {TRUE, FALSE, BOOL, INT, VOID, IF, ELSE, WHILE, BREAK, RETURN};
 
-std::string getOper(uint8_t oper) {
+inline std::string getOper(uint8_t oper) {
     switch(oper) {
         case ADD: return "+";
         case SUB: return "-";
@@ -30,7 +30,7 @@ std::string getOper(uint8_t oper) {
     }
 }
 
-std::string getReserved(uint8_t word) {
+inline std::string getReserved(uint8_t word) {
     switch(word) {
         case TRUE: return "true";
         case FALSE: return "false";

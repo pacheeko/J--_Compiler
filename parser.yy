@@ -174,7 +174,7 @@ globaldeclaration       : variabledeclaration
 variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl($1, $2->c_str()); }
                         ;
 
-identifier              : ID 
+identifier              : ID {std::cout << @$.begin << std::endl;}
                         ;
 
 functiondeclaration     : functionheader block {$$ = $1; $$->AddNode($2);}

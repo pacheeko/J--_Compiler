@@ -58,32 +58,33 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 <BADSTRING>\"   {BEGIN(INITIAL);}
 <BADSTRING><<EOF>>  {return 0;}
 <BADSTRING>.    ;
-"true"      {yylval->strVal = new std::string("true"); return Token::T_TRUE;}
-"false"     {yylval->strVal = new std::string("false"); return Token::T_FALSE;}
-"boolean"   {yylval->strVal = new std::string("boolean"); return Token::T_BOOL;}
-"int"       {yylval->strVal = new std::string("int"); return Token::T_INT;}
-"void"      {yylval->strVal = new std::string("void"); return Token::T_VOID;}
+"true"      return Token::T_TRUE;
+"false"     return Token::T_FALSE;
+"boolean"   return Token::T_BOOL;
+"int"       return Token::T_INT;
+"void"      return Token::T_VOID;
 "if"        return Token::T_IF;
 "else"      return Token::T_ELSE;
 "while"     return Token::T_WHILE;
 "break"     return Token::T_BREAK;
 "return"    return Token::T_RETURN;
-"+"         {yylval->strVal = new std::string("+"); return Token::T_ADD;}
-"-"         {yylval->strVal = new std::string("-"); return Token::T_SUB;}
-"*"         {yylval->strVal = new std::string("*"); return Token::T_MULT;}
-"/"         {yylval->strVal = new std::string("/"); return Token::T_DIV;}
-"%"         {yylval->strVal = new std::string("%"); return Token::T_MOD;}
-"<"         {yylval->strVal = new std::string("<"); return Token::T_LT;}
-">"         {yylval->strVal = new std::string(">"); return Token::T_GT;}
-"<="        {yylval->strVal = new std::string("<="); return Token::T_LE;}
-">="        {yylval->strVal = new std::string(">="); return Token::T_GE;}
-"="         {yylval->strVal = new std::string("="); return Token::T_ASSIGN;}
-"=="        {yylval->strVal = new std::string("=="); return Token::T_EQ;}
-"!="        {yylval->strVal = new std::string("!="); return Token::T_NEQ;}
-"!"         {yylval->strVal = new std::string("!"); return Token::T_NOT;}
-"&&"        {yylval->strVal = new std::string("&&"); return Token::T_AND;}
-"||"        {yylval->strVal = new std::string("||"); return Token::T_OR;}
+"+"         return Token::T_ADD;
+"-"         return Token::T_SUB;
+"*"         return Token::T_MULT;
+"/"         return Token::T_DIV;
+"%"         return Token::T_MOD;
+"<"         return Token::T_LT;
+">"         return Token::T_GT;
+"<="        return Token::T_LE;
+">="        return Token::T_GE;
+"="         return Token::T_ASSIGN;
+"=="        return Token::T_EQ;
+"!="        return Token::T_NEQ;
+"!"         return Token::T_NOT;
+"&&"        return Token::T_AND;
+"||"        return Token::T_OR;
 "("         return Token::T_OPENPAR;
+
 ")"         return Token::T_CLOSEPAR;
 "{"         return Token::T_OPENBRACE;
 "}"         return Token::T_CLOSEBRACE;
