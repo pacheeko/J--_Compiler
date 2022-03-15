@@ -44,7 +44,7 @@ ID      ({alpha}|_)({alpha}|{digit}|_)*
 
  /* Rules here */
 [ \t\r]+    ;          
-\n          {linewarnings = 0;} 
+\n          {linewarnings = 0; loc->lines(); loc->step();} 
 "//"        {BEGIN(COMMENT);}
 <COMMENT>\n   {BEGIN(INITIAL);}
 <COMMENT><<EOF>> {return 0;}

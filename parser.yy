@@ -152,10 +152,10 @@ program         : globaldeclarations {$$ = new Prog(filename);
                 ;   
 
 
-literal         : NUM {$$ = new Num($1);}
-                | STRING {$$ = new String($1->c_str());}
-                | TRUE {$$ = new Literal(Reserved::TRUE);}
-                | FALSE {$$ = new Literal(Reserved::FALSE);}
+literal         : NUM {$$ = new Num(@$.begin.line, $1);}
+                | STRING {$$ = new String(@$.begin.line, $1->c_str());}
+                | TRUE {$$ = new Literal(@$.begin.line, Reserved::TRUE);}
+                | FALSE {$$ = new Literal(@$.begin.line, Reserved::FALSE);}
                 ;
 
 type            : BOOL {$$ = Reserved::BOOL;}
@@ -171,10 +171,10 @@ globaldeclaration       : variabledeclaration
                         | mainfunctiondeclaration   
                         ;
 
-variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl($1, $2->c_str()); }
+variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl(@$.begin.line, $1, $2->c_str()); }
                         ;
 
-identifier              : ID {std::cout << @$.begin << std::endl;}
+identifier              : ID 
                         ;
 
 functiondeclaration     : functionheader block {$$ = $1; $$->AddNode($2);}
@@ -184,7 +184,7 @@ functionheader          : type functiondeclarator {$$ = $2; $$->SetRT($1);}
                         | VOID functiondeclarator {$$ = $2; $$->SetRT(Reserved::VOID);}
                         ;
 
-functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl($1->c_str());
+functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl(@$.begin.line, $1->c_str());
                                                                             $$->AddNode($3);
                                                                             if ($3->hasNext()){
                                                                                 Decl* tmp = $3;
@@ -193,23 +193,23 @@ functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = 
                                                                                     $$->AddNode(tmp);
                                                                                 }
                                                                             } }
-                        | identifier OPENPAR CLOSEPAR {$$ = new FuncDecl($1->c_str());}
+                        | identifier OPENPAR CLOSEPAR {$$ = new FuncDecl(@$.begin.line, $1->c_str());}
                         ;
 
 formalparameterlist     : formalparameter
                         | formalparameterlist COMMA formalparameter {$$ = $3; $$->setNext($1);}
                         ;
 
-formalparameter         : type identifier {$$ = new Param($1, $2->c_str());}
+formalparameter         : type identifier {$$ = new Param(@$.begin.line, $1, $2->c_str());}
                         ;
 
 mainfunctiondeclaration : mainfunctiondeclarator block {$$ = $1; $$->AddNode($2);}
                         ;
 
-mainfunctiondeclarator  : identifier OPENPAR CLOSEPAR    {$$ = new MainDecl($1->c_str()); }
+mainfunctiondeclarator  : identifier OPENPAR CLOSEPAR    {$$ = new MainDecl(@$.begin.line, $1->c_str()); }
                         ;
 
-block                   : OPENBRACE blockstatements CLOSEBRACE {$$ = new Block();
+block                   : OPENBRACE blockstatements CLOSEBRACE {$$ = new Block(@$.begin.line);
                                                                 $$->AddNode($2);
                                                                 if ($2->hasNext()){
                                                                     Stmt* tmp = $2;
@@ -218,7 +218,7 @@ block                   : OPENBRACE blockstatements CLOSEBRACE {$$ = new Block()
                                                                         $$->AddNode(tmp);
                                                                     }
                                                                 } }
-                        | OPENBRACE CLOSEBRACE                  {$$ = new Block();}
+                        | OPENBRACE CLOSEBRACE                  {$$ = new Block(@$.begin.line);}
                         ;
 
 blockstatements         : blockstatement  
@@ -230,20 +230,20 @@ blockstatement          : variabledeclaration
                         ;
 
 statement               : block 
-                        | SEMICOLON {$$ = new NullStmt();}
+                        | SEMICOLON {$$ = new NullStmt(@$.begin.line);}
                         | statementexpression SEMICOLON
-                        | BREAK SEMICOLON {$$ = new BreakStmt();}
-                        | RETURN expression SEMICOLON {$$ = new RetStmt(); $$->AddNode($2);}
-                        | RETURN SEMICOLON {$$ = new RetStmt();}
-                        | IF OPENPAR expression CLOSEPAR statement {$$ = new IfStmt(); $$->AddNode($3); $$->AddNode($5);}
-                        | IF OPENPAR expression CLOSEPAR statement ELSE statement {$$ = new IfStmt(); $$->AddNode($3); $$->AddNode($5); ElseStmt* es = new ElseStmt(); es->AddNode($7); $$->AddNode(es);}
-                        | WHILE OPENPAR expression CLOSEPAR statement {$$ = new WhileStmt(); $$->AddNode($3); $$->AddNode($5);}
+                        | BREAK SEMICOLON {$$ = new BreakStmt(@$.begin.line);}
+                        | RETURN expression SEMICOLON {$$ = new RetStmt(@$.begin.line); $$->AddNode($2);}
+                        | RETURN SEMICOLON {$$ = new RetStmt(@$.begin.line);}
+                        | IF OPENPAR expression CLOSEPAR statement {$$ = new IfStmt(@$.begin.line); $$->AddNode($3); $$->AddNode($5);}
+                        | IF OPENPAR expression CLOSEPAR statement ELSE statement {$$ = new IfStmt(@$.begin.line); $$->AddNode($3); $$->AddNode($5); ElseStmt* es = new ElseStmt(@$.begin.line); es->AddNode($7); $$->AddNode(es);}
+                        | WHILE OPENPAR expression CLOSEPAR statement {$$ = new WhileStmt(@$.begin.line); $$->AddNode($3); $$->AddNode($5);}
                         ;
 
 statementexpression     : assignment 
                         | functioninvocation 
                         ;
-
+//
 primary                 : literal
                         | OPENPAR expression CLOSEPAR {$$ = $2;}
                         | functioninvocation
@@ -253,7 +253,7 @@ argumentlist            : expression
                         | argumentlist COMMA expression {$$ = $3; $$->setNext($1);}
                         ;
 
-functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR {$$ = new FuncCall($1->c_str()); 
+functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR {$$ = new FuncCall(@$.begin.line, $1->c_str()); 
                                                                     $$->AddNode($3);
                                                                     if ($3->hasNext()){
                                                                         Exp* tmp = $3;
@@ -262,54 +262,54 @@ functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR {$$ = new Fun
                                                                             $$->AddNode(tmp);
                                                                         }
                                                                     }}
-                        | identifier OPENPAR CLOSEPAR   {$$ = new FuncCall($1->c_str());}
+                        | identifier OPENPAR CLOSEPAR   {$$ = new FuncCall(@$.begin.line, $1->c_str());}
                         ;
 
 postfixexpression       : primary 
-                        | identifier {$$ = new Id($1->c_str());}
+                        | identifier {$$ = new Id(@$.begin.line, $1->c_str());}
                         ;
 
-unaryexpression         : SUB unaryexpression {$$ = new Arithmetic(Oper::SUB, $2);}
-                        | NOT unaryexpression {$$ = new Logical(Oper::NOT, $2);}  
+unaryexpression         : SUB unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::SUB, $2);}
+                        | NOT unaryexpression {$$ = new Logical(@$.begin.line, Oper::NOT, $2);}  
                         | postfixexpression {}
                         ;
 
 multiplicativeexpression: unaryexpression
-                        | multiplicativeexpression MULT unaryexpression {$$ = new Arithmetic(Oper::MULT, $1, $3) ;}
-                        | multiplicativeexpression DIV unaryexpression {$$ = new Arithmetic(Oper::DIV, $1, $3) ;}
-                        | multiplicativeexpression MOD unaryexpression {$$ = new Arithmetic(Oper::MOD, $1, $3) ;}
+                        | multiplicativeexpression MULT unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::MULT, $1, $3) ;}
+                        | multiplicativeexpression DIV unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::DIV, $1, $3) ;}
+                        | multiplicativeexpression MOD unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::MOD, $1, $3) ;}
                         ;
 
 additiveexpression      : multiplicativeexpression
-                        | additiveexpression ADD multiplicativeexpression {$$ = new Arithmetic(Oper::ADD, $1, $3) ;}
-                        | additiveexpression SUB multiplicativeexpression {$$ = new Arithmetic(Oper::SUB, $1, $3) ;}
+                        | additiveexpression ADD multiplicativeexpression {$$ = new Arithmetic(@$.begin.line, Oper::ADD, $1, $3) ;}
+                        | additiveexpression SUB multiplicativeexpression {$$ = new Arithmetic(@$.begin.line, Oper::SUB, $1, $3) ;}
                         ;
 
 relationalexpression    : additiveexpression
-                        | relationalexpression GT additiveexpression {$$ = new Compare(Oper::GT, $1, $3);}
-                        | relationalexpression LT additiveexpression {$$ = new Compare(Oper::LT, $1, $3);}
-                        | relationalexpression LE additiveexpression {$$ = new Compare(Oper::LE, $1, $3);}
-                        | relationalexpression GE additiveexpression {$$ = new Compare(Oper::GE, $1, $3);}
+                        | relationalexpression GT additiveexpression {$$ = new Compare(@$.begin.line, Oper::GT, $1, $3);}
+                        | relationalexpression LT additiveexpression {$$ = new Compare(@$.begin.line, Oper::LT, $1, $3);}
+                        | relationalexpression LE additiveexpression {$$ = new Compare(@$.begin.line, Oper::LE, $1, $3);}
+                        | relationalexpression GE additiveexpression {$$ = new Compare(@$.begin.line, Oper::GE, $1, $3);}
                         ;
 
 equalityexpression      : relationalexpression
-                        | equalityexpression EQ relationalexpression {$$ = new Compare(Oper::EQ, $1, $3);}
-                        | equalityexpression NEQ relationalexpression {$$ = new Compare(Oper::NEQ, $1, $3);}
+                        | equalityexpression EQ relationalexpression {$$ = new Compare(@$.begin.line, Oper::EQ, $1, $3);}
+                        | equalityexpression NEQ relationalexpression {$$ = new Compare(@$.begin.line, Oper::NEQ, $1, $3);}
                         ;
 
 conditionalandexpression: equalityexpression
-                        | conditionalandexpression AND equalityexpression {$$ = new Logical(Oper::AND, $1, $3);}
+                        | conditionalandexpression AND equalityexpression {$$ = new Logical(@$.begin.line, Oper::AND, $1, $3);}
                         ;
 
 conditionalorexpression : conditionalandexpression
-                        | conditionalorexpression OR conditionalandexpression {$$ = new Logical(Oper::OR, $1, $3);}
+                        | conditionalorexpression OR conditionalandexpression {$$ = new Logical(@$.begin.line, Oper::OR, $1, $3);}
                         ;
 
 assignmentexpression    : conditionalorexpression 
                         | assignment
                         ;
 
-assignment              : identifier ASSIGN assignmentexpression {$$ = new AssnStmt($1->c_str()); $$->AddNode($3); }
+assignment              : identifier ASSIGN assignmentexpression {$$ = new AssnStmt(@$.begin.line, $1->c_str()); $$->AddNode($3); }
                         ;
 
 expression              : assignmentexpression

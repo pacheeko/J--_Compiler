@@ -26,7 +26,7 @@ inline std::string getOper(uint8_t oper) {
         case NOT: return "!";
         case AND: return "&&";
         case OR: return "||";
-        default: return "";
+        default: return "error";
     }
 }
 
@@ -42,7 +42,7 @@ inline std::string getReserved(uint8_t word) {
         case WHILE: return "while";
         case BREAK: return "break";
         case RETURN: return "return";
-        default: return "";
+        default: return "error";
     }
 }
 
@@ -194,6 +194,7 @@ class Stmt : public AST{
 class IfStmt : public Stmt {
 
     protected:
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -202,7 +203,7 @@ class IfStmt : public Stmt {
     }
 
     public:
-    IfStmt() {};
+    IfStmt(int line) : lineno(line) {};
 
     void AddNode(AST *node) override
     {
@@ -212,7 +213,7 @@ class IfStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--If Statement {" << "}: " << "\n" ;
+        std::cout << "--If Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -225,6 +226,7 @@ class IfStmt : public Stmt {
 class ElseStmt : public Stmt {
 
     protected:
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -233,7 +235,7 @@ class ElseStmt : public Stmt {
     }
 
     public:
-    ElseStmt() {};
+    ElseStmt(int line) : lineno(line) {};
 
     void AddNode(AST *node) override
     {
@@ -243,7 +245,7 @@ class ElseStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Else Statement {}: " << "\n";
+        std::cout << "--Else Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (int i = children.size(); i --> 0;)
         {
@@ -256,6 +258,7 @@ class ElseStmt : public Stmt {
 class WhileStmt : public Stmt {
 
     protected:
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -266,7 +269,7 @@ class WhileStmt : public Stmt {
     std::string conditional;
 
     public:
-    WhileStmt() {};
+    WhileStmt(int line) : lineno(line) {};
 
     void AddNode(AST *node) override
     {
@@ -276,7 +279,7 @@ class WhileStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--While Statement {}: " << "\n";
+        std::cout << "--While Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child :children)
         {
@@ -289,6 +292,7 @@ class WhileStmt : public Stmt {
 class Block : public Stmt {
 
     protected:
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -297,7 +301,7 @@ class Block : public Stmt {
     }
 
     public:
-    Block() {};
+    Block(int line) : lineno(line) {};
 
     void AddNode(AST *node) override
     {
@@ -307,12 +311,8 @@ class Block : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        if (children.empty()) {
-            std::cout << "--Block: Empty" << "\n";
-        } 
-        else {
-            std::cout << "--Block: " << "\n";
-        }
+        std::cout << "--Block: {'lineno': " << lineno << "}" << "\n";
+
         INDENTS++;
         for (int i = children.size(); i --> 0;)
         {
@@ -325,6 +325,7 @@ class Block : public Stmt {
 class AssnStmt : public Stmt {
 
     protected:
+    int lineno;
 
     std::string identifier;
 
@@ -336,7 +337,7 @@ class AssnStmt : public Stmt {
 
     public:
 
-    AssnStmt(const char* const id) : identifier(id) {};
+    AssnStmt(int line, const char* const id) : lineno(line), identifier(id) {};
 
     void AddNode(AST *node) override
     {
@@ -346,7 +347,7 @@ class AssnStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Assign Statement {'Id': " << identifier << "}" << "\n";
+        std::cout << "--Assign Statement {'Id': " << identifier << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -359,6 +360,7 @@ class AssnStmt : public Stmt {
 class NullStmt : public Stmt {
 
     protected:
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -368,7 +370,7 @@ class NullStmt : public Stmt {
 
     public:
 
-    NullStmt() {};
+    NullStmt(int line) : lineno(line) {};
 
     void AddNode(AST *node) override
     {
@@ -378,7 +380,7 @@ class NullStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Null Statement {}" << "\n";
+        std::cout << "--Null Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -391,6 +393,7 @@ class NullStmt : public Stmt {
 class BreakStmt : public Stmt {
 
     protected:
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -400,7 +403,7 @@ class BreakStmt : public Stmt {
 
     public:
 
-    BreakStmt() {};
+    BreakStmt(int line) : lineno(line) {};
 
     void AddNode(AST *node) override
     {
@@ -410,7 +413,7 @@ class BreakStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Break Statement {}" << "\n";
+        std::cout << "--Break Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -423,6 +426,7 @@ class BreakStmt : public Stmt {
 class RetStmt : public Stmt {
 
     protected:
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -432,7 +436,7 @@ class RetStmt : public Stmt {
 
     public:
 
-    RetStmt() {};
+    RetStmt(int line) : lineno(line) {};
 
     void AddNode(AST *node) override
     {
@@ -442,7 +446,7 @@ class RetStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Return Statement {}" << "\n";
+        std::cout << "--Return Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -502,6 +506,7 @@ class MainDecl : public Decl
 {
     protected:
     std::string name;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -510,7 +515,7 @@ class MainDecl : public Decl
     }
 
     public:
-    MainDecl(const char* const str) : name(str) {};
+    MainDecl(int line, const char* const str) : lineno(line), name(str) {};
 
     void AddNode(AST *node) override
     {
@@ -519,7 +524,7 @@ class MainDecl : public Decl
 
     void Print() override {
           std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Main Function Declaration: {'name': " << name << "}" << "\n";
+        std::cout << "--Main Function Declaration: {'name': " << name << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -534,6 +539,7 @@ class VarDecl : public Decl
     protected:
     std::string name;
     u_int8_t type;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -542,7 +548,7 @@ class VarDecl : public Decl
     }
 
     public:
-    VarDecl(u_int8_t t, const char* const id) : name(std::string(id)), type(t) {};
+    VarDecl(int line, u_int8_t t, const char* const id) : lineno(line), name(std::string(id)), type(t) {};
 
     void SetType(u_int8_t t) {
         type = t;
@@ -554,8 +560,8 @@ class VarDecl : public Decl
     }
 
     void Print() override {
-          std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Variable Declaration: {'type': " << type << ", 'id': " << name << "}" << "\n";
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << "--Variable Declaration: {'type': " << getReserved(type) << ", 'id': " << name << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -570,6 +576,7 @@ class FuncDecl : public Decl
     protected:
     std::string name;
     u_int8_t return_type;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -578,7 +585,7 @@ class FuncDecl : public Decl
     }
 
     public:
-    FuncDecl(const char* const id) : name(std::string(id)) {};
+    FuncDecl(int line, const char* const id) : lineno(line), name(std::string(id)) {};
 
     void AddNode(AST *node) override
     {
@@ -591,7 +598,7 @@ class FuncDecl : public Decl
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Function Declaration {'return type': " << getReserved(return_type) << ", 'id': " << name << "}" << "\n";
+        std::cout << "--Function Declaration {'return type': " << getReserved(return_type) << ", 'id': " << name  << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -606,7 +613,7 @@ class Param : public Decl
     protected:
     std::string name;
     u_int8_t type;
-
+    int lineno;
     Param* next;
 
     void AddChild(AST *child) override
@@ -616,7 +623,7 @@ class Param : public Decl
     }
 
     public:
-    Param(u_int8_t t, const char* const id) : name(std::string(id)), type(t) {};
+    Param(int line, u_int8_t t, const char* const id) : lineno(line), name(std::string(id)), type(t) {};
 
     bool hasNext() {
         if (next != NULL) {
@@ -646,7 +653,7 @@ class Param : public Decl
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Formal Parameter {'type': " << getReserved(type) << ", 'id': " << name << "}" << "\n";
+        std::cout << "--Formal Parameter {'type': " << getReserved(type) << ", 'id': " << name << ", 'lineno': " << lineno  << "}" << "\n";
         INDENTS++;
         for (int i = children.size(); i --> 0;)
         {
@@ -707,7 +714,7 @@ class Exp : public AST {
 
 class Num : public Exp {
   protected:
-    int value;
+    int value, lineno;
 
     void AddChild(AST *child) override
     {
@@ -716,7 +723,7 @@ class Num : public Exp {
     }
 
   public:
-    Num(int val) : value(val) {}
+    Num(int line, int val) : lineno(line), value(val) {}
 
     void AddNode(AST *node) override
     {
@@ -725,7 +732,7 @@ class Num : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Num {'value': " << value << "}" << "\n";
+        std::cout << "--Num {'value': " << value << ", 'lineno': " << lineno  << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -738,6 +745,7 @@ class Num : public Exp {
 class Literal : public Exp {
   protected:
     u_int8_t value;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -746,7 +754,7 @@ class Literal : public Exp {
     }
 
   public:
-    Literal(u_int8_t val) : value(val) {}
+    Literal(int line, u_int8_t val) : lineno(line), value(val) {}
 
     void AddNode(AST *node) override
     {
@@ -755,7 +763,7 @@ class Literal : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Literal {'value': " << getReserved(value) << "}" << "\n";
+        std::cout << "--Literal {'value': " << getReserved(value)  << ", 'lineno': " << lineno  << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -768,6 +776,7 @@ class Literal : public Exp {
 class String : public Exp {
   protected:
     std::string value;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -776,7 +785,7 @@ class String : public Exp {
     }
 
   public:
-    String(const char* const val) : value(val) {}
+    String(int line, const char* const val) : lineno(line), value(val) {}
     
     void AddNode(AST *node) override
     {
@@ -785,7 +794,7 @@ class String : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--String Literal {'value': " << value << "}" << "\n";
+        std::cout << "--String Literal {'value': " << value << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -798,6 +807,7 @@ class String : public Exp {
 class Id : public Exp {
   protected:
     std::string id;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -808,7 +818,7 @@ class Id : public Exp {
     Exp* next;
 
   public:
-    Id(const char* const value) : id(std::string(value)) {}
+    Id(int line, const char* const value) : lineno(line), id(std::string(value)) {}
 
     bool hasNext() {
         if (next != NULL) {
@@ -836,7 +846,7 @@ class Id : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Id {'name': " << id << "}" << "\n";
+        std::cout << "--Id {'name': " << id << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -849,6 +859,7 @@ class Id : public Exp {
 class Compare : public Exp {
   protected:
     u_int8_t type;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -860,7 +871,7 @@ class Compare : public Exp {
     Exp * after;
 
   public:
-    Compare(u_int8_t t, Exp* b, Exp* a) : type(t), before(b), after(a) {}
+    Compare(int line, u_int8_t t, Exp* b, Exp* a) : lineno(line), type(t), before(b), after(a) {}
 
     void AddNode(AST *node) override
     {
@@ -869,7 +880,7 @@ class Compare : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Comparison operator {'type': " << getOper(type) << " }" << "\n";
+        std::cout << "--Comparison operator {'type': " << getOper(type) << ", 'lineno': " << lineno << " }" << "\n";
         INDENTS++;
         before->Print();
         after->Print();
@@ -884,6 +895,7 @@ class Compare : public Exp {
 class Arithmetic : public Exp {
   protected:
     u_int8_t type;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -895,8 +907,8 @@ class Arithmetic : public Exp {
     Exp * after;
 
   public:
-    Arithmetic(u_int8_t t, Exp* a) : type(t), after(a) {}
-    Arithmetic(u_int8_t t, Exp* b, Exp*a) : type(t), before(b), after(a) {}
+    Arithmetic(int line, u_int8_t t, Exp* a) : lineno(line), type(t), after(a) {}
+    Arithmetic(int line, u_int8_t t, Exp* b, Exp*a) : lineno(line), type(t), before(b), after(a) {}
 
     void AddNode(AST *node) override
     {
@@ -905,7 +917,7 @@ class Arithmetic : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Arithmetic operator {'type': " << getOper(type) << " }" << "\n";
+        std::cout << "--Arithmetic operator {'type': " << getOper(type) << ", 'lineno': " << lineno << " }" << "\n";
         INDENTS++;
         if (before != NULL) {
             before->Print();
@@ -922,6 +934,7 @@ class Arithmetic : public Exp {
 class Logical : public Exp {
   protected:
     u_int8_t type;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -933,8 +946,8 @@ class Logical : public Exp {
     Exp * after;
 
   public:
-    Logical(u_int8_t t, Exp* a) : type(t), after(a) {}
-    Logical(u_int8_t t, Exp* b, Exp*a) : type(t), before(b), after(a) {}
+    Logical(int line, u_int8_t t, Exp* a) : lineno(line), type(t), after(a) {}
+    Logical(int line, u_int8_t t, Exp* b, Exp*a) : lineno(line), type(t), before(b), after(a) {}
 
     void AddNode(AST *node) override
     {
@@ -943,7 +956,7 @@ class Logical : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Logical operator {'type': " << getOper(type) << " }" << "\n";
+        std::cout << "--Logical operator {'type': " << getOper(type) << ", 'lineno': " << lineno << " }" << "\n";
         INDENTS++;
         if (before != NULL) {
             before->Print();
@@ -960,6 +973,7 @@ class Logical : public Exp {
 class FuncCall : public Exp {
   protected:
     std::string id;
+    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -968,7 +982,7 @@ class FuncCall : public Exp {
     }
 
   public:
-    FuncCall(const char* const value) : id(std::string(value)) {}
+    FuncCall(int line, const char* const value) : lineno(line), id(std::string(value)) {}
 
     void AddNode(AST *node) override
     {
@@ -977,7 +991,7 @@ class FuncCall : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Function Invocation {'name': " << id << "}" << "\n";
+        std::cout << "--Function Invocation {'name': " << id << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         std::cout << std::string(INDENTS*2, INDENT_CHAR) << "Arguments:\n";
         for (int i = children.size(); i --> 0;)
