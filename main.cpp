@@ -12,7 +12,7 @@
 
 int main(int argc, char **argv) {
 
-    std::istream *input = &std::cin;
+    std::istream *input;
 
     std::ifstream file;
 

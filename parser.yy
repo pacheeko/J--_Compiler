@@ -44,6 +44,7 @@
 %union{
     std::string* strVal;
     int ival;
+    u_int8_t enumVal;
     Prog *prog;
     Stmt *stmt;
     Decl *decl;
@@ -55,38 +56,37 @@
     Block *block;
     Id *id;
 };
-
-%token <strVal> ADD "+"
-%token <strVal> SUB "-"
-%token <strVal> DIV "/"
-%token <strVal> MULT "*"
-%token <strVal> MOD "%"
-%token <strVal> LT "<"
-%token <strVal> GT ">"
-%token <strVal> LE "<="
-%token <strVal> GE ">="
-%token <strVal> EQ "=="
-%token <strVal> NEQ "!="
-%token <strVal> NOT "!"
-%token <strVal> AND "&&"
-%token <strVal> OR "||"
-%token <strVal> ASSIGN "="
-%token <strVal> OPENPAR "("
-%token <strVal> CLOSEPAR ")"
-%token <strVal> OPENBRACE "{"
-%token <strVal> CLOSEBRACE "}"
-%token <strVal> SEMICOLON ";"
-%token <strVal> COMMA ","
-%token <strVal> TRUE "true"
-%token <strVal> FALSE "false"
-%token <strVal> BOOL "boolean"
-%token <strVal> INT "int"
-%token <strVal> VOID "void"
-%token <strVal> IF "if"
-%token <strVal> ELSE "else"
-%token <strVal> WHILE "while"
-%token <strVal> BREAK "break"
-%token <strVal> RETURN "return"
+%token ADD "+"
+%token SUB "-"
+%token DIV "/"
+%token MULT "*"
+%token MOD "%"
+%token LT "<"
+%token GT ">"
+%token LE "<="
+%token GE ">="
+%token EQ "=="
+%token NEQ "!="
+%token NOT "!"
+%token AND "&&"
+%token OR "||"
+%token ASSIGN "="
+%token OPENPAR "("
+%token CLOSEPAR ")"
+%token OPENBRACE "{"
+%token CLOSEBRACE "}"
+%token SEMICOLON ";"
+%token COMMA ","
+%token TRUE "true"
+%token FALSE "false"
+%token BOOL "boolean"
+%token INT "int"
+%token VOID "void"
+%token IF "if"
+%token ELSE "else"
+%token WHILE "while"
+%token BREAK "break"
+%token RETURN "return"
 %token <strVal> STRING "string"
 %token <strVal> ID "id"
 %token <ival> NUM "number"
@@ -101,7 +101,6 @@
 %type <funcdecl> functiondeclarator
 %type <funcdecl> functiondeclaration
 %type <funcdecl> functionheader
-%type <strVal> type
 %type <param> formalparameter
 %type <decl> formalparameterlist
 %type <stmt> block
@@ -115,6 +114,7 @@
 %type <exp> assignmentexpression
 %type <exp> postfixexpression
 %type <exp> literal
+%type <enumVal> type
 %type <exp> relationalexpression
 %type <exp> additiveexpression
 %type <exp> multiplicativeexpression
@@ -153,13 +153,13 @@ program         : globaldeclarations {$$ = new Prog(filename);
 
 
 literal         : NUM {$$ = new Num($1);}
-                | STRING {$$ = new Literal($1->c_str());}
-                | TRUE {$$ = new Literal($1->c_str());}
-                | FALSE {$$ = new Literal($1->c_str());}
+                | STRING {$$ = new String($1->c_str());}
+                | TRUE {$$ = new Literal(Reserved::TRUE);}
+                | FALSE {$$ = new Literal(Reserved::FALSE);}
                 ;
 
-type            : BOOL
-                | INT   
+type            : BOOL {$$ = Reserved::BOOL;}
+                | INT {$$ = Reserved::INT;}  
                 ;
 
 globaldeclarations      : globaldeclaration {$$ = $1;}
@@ -171,7 +171,7 @@ globaldeclaration       : variabledeclaration   {$$ = $1;}
                         | mainfunctiondeclaration   {$$ = $1;}
                         ;
 
-variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl($1->c_str(), $2->c_str()); }
+variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl($1, $2->c_str()); }
                         ;
 
 identifier              : ID {$$ = $1;}
@@ -180,8 +180,8 @@ identifier              : ID {$$ = $1;}
 functiondeclaration     : functionheader block {$$ = $1; $$->AddNode($2);}
                         ;
 
-functionheader          : type functiondeclarator {$$ = $2; $$->SetRT($1->c_str());}
-                        | VOID functiondeclarator {$$ = $2; $$->SetRT($1->c_str());}
+functionheader          : type functiondeclarator {$$ = $2; $$->SetRT($1);}
+                        | VOID functiondeclarator {$$ = $2; $$->SetRT(Reserved::VOID);}
                         ;
 
 functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl($1->c_str());
@@ -196,11 +196,11 @@ functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = 
                         | identifier OPENPAR CLOSEPAR {$$ = new FuncDecl($1->c_str());}
                         ;
 
-formalparameterlist     : formalparameter   {$$ = $1; }
+formalparameterlist     : formalparameter   {$$ = $1;}
                         | formalparameterlist COMMA formalparameter {$$ = $3; $$->setNext($1);}
                         ;
 
-formalparameter         : type identifier {$$ = new Param($1->c_str(), $2->c_str());}
+formalparameter         : type identifier {$$ = new Param($1, $2->c_str());}
                         ;
 
 mainfunctiondeclaration : mainfunctiondeclarator block {$$ = $1; $$->AddNode($2);}
@@ -269,40 +269,40 @@ postfixexpression       : primary
                         | identifier {$$ = new Id($1->c_str());}
                         ;
 
-unaryexpression         : SUB unaryexpression {$$ = new Arithmetic($1->c_str(), $2);}
-                        | NOT unaryexpression {$$ = new Logical($1->c_str(), $2);}  
+unaryexpression         : SUB unaryexpression {$$ = new Arithmetic(Oper::SUB, $2);}
+                        | NOT unaryexpression {$$ = new Logical(Oper::NOT, $2);}  
                         | postfixexpression {}
                         ;
 
 multiplicativeexpression: unaryexpression
-                        | multiplicativeexpression MULT unaryexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
-                        | multiplicativeexpression DIV unaryexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
-                        | multiplicativeexpression MOD unaryexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
+                        | multiplicativeexpression MULT unaryexpression {$$ = new Arithmetic(Oper::MULT, $1, $3) ;}
+                        | multiplicativeexpression DIV unaryexpression {$$ = new Arithmetic(Oper::DIV, $1, $3) ;}
+                        | multiplicativeexpression MOD unaryexpression {$$ = new Arithmetic(Oper::MOD, $1, $3) ;}
                         ;
 
 additiveexpression      : multiplicativeexpression
-                        | additiveexpression ADD multiplicativeexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
-                        | additiveexpression SUB multiplicativeexpression {$$ = new Arithmetic($2->c_str(), $1, $3) ;}
+                        | additiveexpression ADD multiplicativeexpression {$$ = new Arithmetic(Oper::ADD, $1, $3) ;}
+                        | additiveexpression SUB multiplicativeexpression {$$ = new Arithmetic(Oper::SUB, $1, $3) ;}
                         ;
 
 relationalexpression    : additiveexpression
-                        | relationalexpression GT additiveexpression {$$ = new Compare($2->c_str(), $1, $3);}
-                        | relationalexpression LT additiveexpression {$$ = new Compare($2->c_str(), $1, $3);}
-                        | relationalexpression LE additiveexpression {$$ = new Compare($2->c_str(), $1, $3);}
-                        | relationalexpression GE additiveexpression {$$ = new Compare($2->c_str(), $1, $3);}
+                        | relationalexpression GT additiveexpression {$$ = new Compare(Oper::GT, $1, $3);}
+                        | relationalexpression LT additiveexpression {$$ = new Compare(Oper::LT, $1, $3);}
+                        | relationalexpression LE additiveexpression {$$ = new Compare(Oper::LE, $1, $3);}
+                        | relationalexpression GE additiveexpression {$$ = new Compare(Oper::GE, $1, $3);}
                         ;
 
 equalityexpression      : relationalexpression
-                        | equalityexpression EQ relationalexpression {$$ = new Compare($2->c_str(), $1, $3);}
-                        | equalityexpression NEQ relationalexpression {$$ = new Compare($2->c_str(), $1, $3);}
+                        | equalityexpression EQ relationalexpression {$$ = new Compare(Oper::EQ, $1, $3);}
+                        | equalityexpression NEQ relationalexpression {$$ = new Compare(Oper::NEQ, $1, $3);}
                         ;
 
 conditionalandexpression: equalityexpression
-                        | conditionalandexpression AND equalityexpression {$$ = new Logical($2->c_str(), $1, $3);}
+                        | conditionalandexpression AND equalityexpression {$$ = new Logical(Oper::AND, $1, $3);}
                         ;
 
 conditionalorexpression : conditionalandexpression
-                        | conditionalorexpression OR conditionalandexpression {$$ = new Logical($2->c_str(), $1, $3);}
+                        | conditionalorexpression OR conditionalandexpression {$$ = new Logical(Oper::OR, $1, $3);}
                         ;
 
 assignmentexpression    : conditionalorexpression 
