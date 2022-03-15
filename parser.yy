@@ -36,15 +36,14 @@
     AST* root = nullptr;
     char* filename;
 }
-
-
+//
 %define api.token.prefix {T_}
 
 /* Semantic type / YYSTYPE */
 %union{
     std::string* strVal;
     int ival;
-    u_int8_t enumVal;
+    uint8_t enumVal;
     Prog *prog;
     Stmt *stmt;
     Decl *decl;
@@ -56,6 +55,7 @@
     Block *block;
     Id *id;
 };
+
 %token ADD "+"
 %token SUB "-"
 %token DIV "/"
@@ -101,6 +101,7 @@
 %type <funcdecl> functiondeclarator
 %type <funcdecl> functiondeclaration
 %type <funcdecl> functionheader
+%type <enumVal> type
 %type <param> formalparameter
 %type <decl> formalparameterlist
 %type <stmt> block
@@ -114,7 +115,6 @@
 %type <exp> assignmentexpression
 %type <exp> postfixexpression
 %type <exp> literal
-%type <enumVal> type
 %type <exp> relationalexpression
 %type <exp> additiveexpression
 %type <exp> multiplicativeexpression
@@ -159,22 +159,22 @@ literal         : NUM {$$ = new Num($1);}
                 ;
 
 type            : BOOL {$$ = Reserved::BOOL;}
-                | INT {$$ = Reserved::INT;}  
+                | INT {$$ = Reserved::INT;}
                 ;
 
-globaldeclarations      : globaldeclaration {$$ = $1;}
+globaldeclarations      : globaldeclaration 
                         | globaldeclarations globaldeclaration  {$$ = $2; $$->setNext($1);}
                         ;
 
-globaldeclaration       : variabledeclaration   {$$ = $1;}
-                        | functiondeclaration   {$$ = $1;}
-                        | mainfunctiondeclaration   {$$ = $1;}
+globaldeclaration       : variabledeclaration   
+                        | functiondeclaration  
+                        | mainfunctiondeclaration   
                         ;
 
 variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl($1, $2->c_str()); }
                         ;
 
-identifier              : ID {$$ = $1;}
+identifier              : ID 
                         ;
 
 functiondeclaration     : functionheader block {$$ = $1; $$->AddNode($2);}
@@ -196,7 +196,7 @@ functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = 
                         | identifier OPENPAR CLOSEPAR {$$ = new FuncDecl($1->c_str());}
                         ;
 
-formalparameterlist     : formalparameter   {$$ = $1;}
+formalparameterlist     : formalparameter
                         | formalparameterlist COMMA formalparameter {$$ = $3; $$->setNext($1);}
                         ;
 
@@ -221,7 +221,7 @@ block                   : OPENBRACE blockstatements CLOSEBRACE {$$ = new Block()
                         | OPENBRACE CLOSEBRACE                  {$$ = new Block();}
                         ;
 
-blockstatements         : blockstatement {$$ = $1; }    
+blockstatements         : blockstatement  
                         | blockstatements blockstatement {$$ = $2; $$->setNext($1);}
                         ;
 
@@ -229,7 +229,7 @@ blockstatement          : variabledeclaration
                         | statement 
                         ;
 
-statement               : block {$$ = $1;}
+statement               : block 
                         | SEMICOLON {$$ = new NullStmt();}
                         | statementexpression SEMICOLON
                         | BREAK SEMICOLON {$$ = new BreakStmt();}

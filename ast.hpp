@@ -194,7 +194,6 @@ class Stmt : public AST{
 class IfStmt : public Stmt {
 
     protected:
-    int lineno;
 
     void AddChild(AST *child) override
     {
@@ -213,7 +212,7 @@ class IfStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--If Statement {lineno: " << std::to_string(lineno) << "}: " << "\n" ;
+        std::cout << "--If Statement {" << "}: " << "\n" ;
         INDENTS++;
         for (auto child : children)
         {
@@ -462,7 +461,6 @@ class Decl : public AST{
     }
 
     Decl * next;
-    int lineno;
     public:
 
     bool hasNext() {
