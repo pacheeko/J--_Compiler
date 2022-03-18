@@ -45,9 +45,7 @@
     int ival;
     uint8_t enumVal;
     Prog *prog;
-    Stmt *stmt;
-    Decl *decl;
-    Exp *exp;
+    AST *ast;
     MainDecl *maindecl;
     VarDecl *vardecl;
     FuncDecl *funcdecl;
@@ -95,35 +93,35 @@
 %type <maindecl> mainfunctiondeclaration
 %type <maindecl> mainfunctiondeclarator
 %type <strVal> identifier
-%type <decl> globaldeclaration
-%type <decl> globaldeclarations
+%type <ast> globaldeclaration
+%type <ast> globaldeclarations
 %type <vardecl> variabledeclaration
 %type <funcdecl> functiondeclarator
 %type <funcdecl> functiondeclaration
 %type <funcdecl> functionheader
 %type <enumVal> type
 %type <param> formalparameter
-%type <decl> formalparameterlist
-%type <stmt> block
-%type <stmt> blockstatement
-%type <stmt> blockstatements
-%type <stmt> statement
-%type <stmt> statementexpression
-%type <exp> expression
-%type <exp> equalityexpression
-%type <stmt> assignment
-%type <exp> assignmentexpression
-%type <exp> postfixexpression
-%type <exp> literal
-%type <exp> relationalexpression
-%type <exp> additiveexpression
-%type <exp> multiplicativeexpression
-%type <exp> unaryexpression
-%type <exp> conditionalandexpression
-%type <exp> conditionalorexpression
-%type <exp> argumentlist
-%type <exp> functioninvocation
-%type <exp> primary
+%type <ast> formalparameterlist
+%type <ast> block
+%type <ast> blockstatement
+%type <ast> blockstatements
+%type <ast> statement
+%type <ast> statementexpression
+%type <ast> expression
+%type <ast> equalityexpression
+%type <ast> assignment
+%type <ast> assignmentexpression
+%type <ast> postfixexpression
+%type <ast> literal
+%type <ast> relationalexpression
+%type <ast> additiveexpression
+%type <ast> multiplicativeexpression
+%type <ast> unaryexpression
+%type <ast> conditionalandexpression
+%type <ast> conditionalorexpression
+%type <ast> argumentlist
+%type <ast> functioninvocation
+%type <ast> primary
 
 /* Define the start symbol */
 %start start
@@ -143,7 +141,7 @@ Each global declaration is a child of the program node
 program         : globaldeclarations {$$ = new Prog(filename); 
                                      $$->AddNode($1);
                                      if ($1->hasNext()){
-                                            Decl* tmp = $1;
+                                            AST* tmp = $1;
                                             while (tmp->hasNext()){
                                                 tmp = tmp->getNext();
                                                 $$->AddNode(tmp);
@@ -168,7 +166,7 @@ globaldeclarations      : globaldeclaration
 
 globaldeclaration       : variabledeclaration   
                         | functiondeclaration  
-                        | mainfunctiondeclaration   
+                        | mainfunctiondeclaration 
                         ;
 
 variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl(@$.begin.line, $1, $2->c_str()); }
@@ -180,14 +178,14 @@ identifier              : ID
 functiondeclaration     : functionheader block {$$ = $1; $$->AddNode($2);}
                         ;
 
-functionheader          : type functiondeclarator {$$ = $2; $$->SetRT($1);}
-                        | VOID functiondeclarator {$$ = $2; $$->SetRT(Reserved::VOID);}
+functionheader          : type functiondeclarator {$$ = $2; $$->setType($1);}
+                        | VOID functiondeclarator {$$ = $2; $$->setType(Reserved::VOID);}
                         ;
 
 functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl(@$.begin.line, $1->c_str());
                                                                             $$->AddNode($3);
                                                                             if ($3->hasNext()){
-                                                                                Decl* tmp = $3;
+                                                                                AST* tmp = $3;
                                                                                 while (tmp->hasNext()){
                                                                                     tmp = tmp->getNext();
                                                                                     $$->AddNode(tmp);
@@ -212,7 +210,7 @@ mainfunctiondeclarator  : identifier OPENPAR CLOSEPAR    {$$ = new MainDecl(@$.b
 block                   : OPENBRACE blockstatements CLOSEBRACE {$$ = new Block(@$.begin.line);
                                                                 $$->AddNode($2);
                                                                 if ($2->hasNext()){
-                                                                    Stmt* tmp = $2;
+                                                                    AST* tmp = $2;
                                                                     while (tmp->hasNext()){
                                                                         tmp = tmp->getNext();
                                                                         $$->AddNode(tmp);
@@ -243,7 +241,7 @@ statement               : block
 statementexpression     : assignment 
                         | functioninvocation 
                         ;
-//
+
 primary                 : literal
                         | OPENPAR expression CLOSEPAR {$$ = $2;}
                         | functioninvocation
@@ -256,7 +254,7 @@ argumentlist            : expression
 functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR {$$ = new FuncCall(@$.begin.line, $1->c_str()); 
                                                                     $$->AddNode($3);
                                                                     if ($3->hasNext()){
-                                                                        Exp* tmp = $3;
+                                                                        AST* tmp = $3;
                                                                         while (tmp->hasNext()){
                                                                             tmp = tmp->getNext();
                                                                             $$->AddNode(tmp);

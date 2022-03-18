@@ -2,8 +2,8 @@
 # *** Taken from Shankar Ganesh tutorial code ***
 CXX := clang++ 
 CXXFLAGS := -std=c++14
-OBJS = parser.o scanner.o main.o ast.o
-EXEC = parser
+OBJS = parser.o scanner.o main.o ast.o semAnalyzer.o
+EXEC = main
 
 
 all: build

@@ -6,9 +6,10 @@
 #include <cerrno>
 #include <cstring>
 #include <fstream>
+#include "vector"
 #include "scanner.hpp"
 #include "parser.hh"
-#include "vector"
+#include "semAnalyzer.cpp"
 
 int main(int argc, char **argv) {
 
@@ -22,8 +23,11 @@ int main(int argc, char **argv) {
     
     filename = argv[1];
 
-    if (argc == 2)
-    {
+    if (argc != 2) {
+        std::cerr << "You must provide exactly 1 command line argument: The file path you wish to parse." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    else {
         file.open(argv[1]);
 
         if (!file.good())
@@ -33,8 +37,7 @@ int main(int argc, char **argv) {
         }
 
         input = &file;
-    }
-
+        }
     auto lexer = createLexer(input);
     auto parser = std::make_unique<JCC::Parser>(lexer);
    
@@ -43,6 +46,12 @@ int main(int argc, char **argv) {
         std::cerr << "Parse failed!!\n";
         if (file.is_open()) file.close();
         return 1;
+    }
+
+    root = semanticAnalyzer(root);
+    if (errors > 0) {
+        std::cerr << errors << " error(s) found. Exiting." << std::endl;
+        exit(EXIT_FAILURE);
     }
     std::cout << "Parse Complete! Printing AST..." << std::endl;
     root->Print();  //Prints out the entire abstract syntax tree

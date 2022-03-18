@@ -57,44 +57,87 @@ once the parser has finished.
 class AST;
     class Prog; //Each AST will contain exactly one Prog node, which acts as the root of the tree
 
-    class Stmt;
-        class Block;
-        class IfStmt;
-        class ElseStmt;
-        class AssnStmt;
-        class NullStmt;
-        class RetStmt;
-        class BreakStmt;
-        class WhileStmt;
+    class Block;
+    class IfStmt;
+    class ElseStmt;
+    class AssnStmt;
+    class NullStmt;
+    class RetStmt;
+    class BreakStmt;
+    class WhileStmt;
 
-    class Exp;
-        class Id;
-        class Num;
-        class Literal;
-        class Arithmetic;
-        class Compare;
-        class Logical;
-        class FuncCall;
+    class Id;
+    class Num;
+    class Literal;
+    class Arithmetic;
+    class Compare;
+    class Logical;
+    class FuncCall;
 
-    class Decl;
-        class MainDecl;
-        class FuncDecl;
-        class VarDecl;
-        class Param;
+    class MainDecl;
+    class FuncDecl;
+    class VarDecl;
+    class Param;
 
 class AST
 {
     protected:
 
     std::vector<AST*> children;
-
+    
     virtual void AddChild(AST *child) = 0;
+    u_int8_t type;
+    std::string name;
+    int lineno;
+    AST * next;
+    void * memoryLoc;
 
     public:
 
-    int numChildren() {
+    virtual int numChildren() {
         return children.size();
     }
+    virtual std::vector<AST*> getChildren() {
+        return children;
+    }
+
+    virtual AST * getNext() {
+        return next;
+    }
+
+    virtual bool hasNext() {
+        if (next != NULL) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    virtual void setNext(AST* ast) {
+        next = ast;
+    }
+
+    virtual std::string getType() {
+        return "";
+    }
+
+    virtual std::string getNodeType() {
+        return "";
+    }
+
+    virtual std::string getName() {
+        return name;
+    }
+
+    virtual void setType(u_int8_t t) {
+        type = t;
+    }
+
+    virtual void setLoc(void* loc) {
+        memoryLoc = loc;
+    }
+
     AST() = default;
 
     virtual ~AST()
@@ -144,57 +187,11 @@ class Prog : public AST
     }
 };
 
-class Stmt : public AST{
-    protected:
-    void AddChild(AST *child) override
-    {
-        children.push_back(child);
-
-    }
-
-    Stmt* next;
-
-    public:
-
-    bool hasNext() {
-        if (next != NULL) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-    void setNext(Stmt *node) {
-        next = node;
-    }
-
-    Stmt * getNext() {
-        return next;
-    }
-
-    void AddNode(AST *node) override
-    {
-        AddChild(node);
-    }
-
-    void Print() override
-    {
-        std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        INDENTS++;
-        for (auto child : children)
-        {
-            child->Print();
-        }
-        INDENTS--;
-
-    }
-};
-
-class IfStmt : public Stmt {
+class IfStmt : public AST {
 
     protected:
     int lineno;
+    std::string nodeType = "if";
 
     void AddChild(AST *child) override
     {
@@ -205,6 +202,10 @@ class IfStmt : public Stmt {
     public:
     IfStmt(int line) : lineno(line) {};
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -213,7 +214,7 @@ class IfStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--If Statement {'lineno': " << lineno << "}" << "\n";
+        std::cout << "--If Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -223,10 +224,11 @@ class IfStmt : public Stmt {
     }
 };
 
-class ElseStmt : public Stmt {
+class ElseStmt : public AST {
 
     protected:
     int lineno;
+    std::string nodeType = "else";
 
     void AddChild(AST *child) override
     {
@@ -237,6 +239,10 @@ class ElseStmt : public Stmt {
     public:
     ElseStmt(int line) : lineno(line) {};
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -245,7 +251,7 @@ class ElseStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Else Statement {'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Else Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (int i = children.size(); i --> 0;)
         {
@@ -255,10 +261,11 @@ class ElseStmt : public Stmt {
     }
 };
 
-class WhileStmt : public Stmt {
+class WhileStmt : public AST {
 
     protected:
     int lineno;
+    std::string nodeType = "while";
 
     void AddChild(AST *child) override
     {
@@ -271,6 +278,10 @@ class WhileStmt : public Stmt {
     public:
     WhileStmt(int line) : lineno(line) {};
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -279,7 +290,7 @@ class WhileStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--While Statement {'lineno': " << lineno << "}" << "\n";
+        std::cout << "--While Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child :children)
         {
@@ -289,10 +300,11 @@ class WhileStmt : public Stmt {
     }
 };
 
-class Block : public Stmt {
+class Block : public AST {
 
     protected:
     int lineno;
+    std::string nodeType = "block";
 
     void AddChild(AST *child) override
     {
@@ -303,6 +315,10 @@ class Block : public Stmt {
     public:
     Block(int line) : lineno(line) {};
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -311,7 +327,7 @@ class Block : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Block: {'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Block: {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
 
         INDENTS++;
         for (int i = children.size(); i --> 0;)
@@ -322,10 +338,11 @@ class Block : public Stmt {
     }
 };
 
-class AssnStmt : public Stmt {
+class AssnStmt : public AST {
 
     protected:
     int lineno;
+    std::string nodeType = "assnstmt";
 
     std::string identifier;
 
@@ -338,6 +355,10 @@ class AssnStmt : public Stmt {
     public:
 
     AssnStmt(int line, const char* const id) : lineno(line), identifier(id) {};
+
+    std::string getNodeType() override {
+        return nodeType;
+    }
 
     void AddNode(AST *node) override
     {
@@ -357,10 +378,11 @@ class AssnStmt : public Stmt {
     }
 };
 
-class NullStmt : public Stmt {
+class NullStmt : public AST {
 
     protected:
     int lineno;
+    std::string nodeType = "null";
 
     void AddChild(AST *child) override
     {
@@ -369,9 +391,12 @@ class NullStmt : public Stmt {
     }
 
     public:
-
     NullStmt(int line) : lineno(line) {};
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -380,7 +405,7 @@ class NullStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Null Statement {'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Null Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -390,10 +415,11 @@ class NullStmt : public Stmt {
     }
 };
 
-class BreakStmt : public Stmt {
+class BreakStmt : public AST {
 
     protected:
     int lineno;
+    std::string nodeType = "break";
 
     void AddChild(AST *child) override
     {
@@ -402,8 +428,11 @@ class BreakStmt : public Stmt {
     }
 
     public:
-
     BreakStmt(int line) : lineno(line) {};
+
+    std::string getNodeType() override {
+        return nodeType;
+    }
 
     void AddNode(AST *node) override
     {
@@ -413,7 +442,7 @@ class BreakStmt : public Stmt {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Break Statement {'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Break Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -423,10 +452,11 @@ class BreakStmt : public Stmt {
     }
 };
 
-class RetStmt : public Stmt {
+class RetStmt : public AST {
 
     protected:
     int lineno;
+    std::string nodeType = "ret";
 
     void AddChild(AST *child) override
     {
@@ -437,6 +467,10 @@ class RetStmt : public Stmt {
     public:
 
     RetStmt(int line) : lineno(line) {};
+
+    std::string getNodeType() override {
+        return nodeType;
+    }
 
     void AddNode(AST *node) override
     {
@@ -456,56 +490,12 @@ class RetStmt : public Stmt {
     }
 };
 
-class Decl : public AST{
-    protected:
-    void AddChild(AST *child) override
-    {
-        children.push_back(child);
-
-    }
-
-    Decl * next;
-    public:
-
-    bool hasNext() {
-        if (next != NULL) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-    void setNext(Decl *node) {
-        next = node;
-    }
-
-    Decl * getNext() {
-        return next;
-    }
-
-    void AddNode(AST *node) override
-    {
-        AddChild(node);
-    }
-
-    void Print() override
-    {
-        std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        INDENTS++;
-        for (int i = children.size(); i --> 0;)
-        {
-            children[i]->Print();
-        }
-        INDENTS--;
-
-    }
-};
-
-class MainDecl : public Decl
+class MainDecl : public AST
 {
     protected:
     std::string name;
+    std::string nodeType = "maindecl";
+    u_int8_t type = 0;
     int lineno;
 
     void AddChild(AST *child) override
@@ -517,6 +507,18 @@ class MainDecl : public Decl
     public:
     MainDecl(int line, const char* const str) : lineno(line), name(str) {};
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
+    std::string getName() override {
+        return name;
+    }
+
+    std::string getType() override {
+        return "";
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -524,7 +526,7 @@ class MainDecl : public Decl
 
     void Print() override {
           std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Main Function Declaration: {'name': " << name << ", 'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Main Function Declaration: {'name': " << name << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -534,10 +536,11 @@ class MainDecl : public Decl
     }
 };
 
-class VarDecl : public Decl
+class VarDecl : public AST
 {
     protected:
     std::string name;
+    std::string nodeType = "vardecl";
     u_int8_t type;
     int lineno;
 
@@ -550,8 +553,16 @@ class VarDecl : public Decl
     public:
     VarDecl(int line, u_int8_t t, const char* const id) : lineno(line), name(std::string(id)), type(t) {};
 
-    void SetType(u_int8_t t) {
-        type = t;
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
+    std::string getName() override {
+        return name;
+    }
+
+    std::string getType() override {
+        return getReserved(type);
     }
 
     void AddNode(AST *node) override
@@ -561,7 +572,7 @@ class VarDecl : public Decl
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Variable Declaration: {'type': " << getReserved(type) << ", 'id': " << name << ", 'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Variable Declaration: {'type': " << getReserved(type) << ", 'id': " << name << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc  << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -571,11 +582,12 @@ class VarDecl : public Decl
     }
 };
 
-class FuncDecl : public Decl
+class FuncDecl : public AST
 {
     protected:
     std::string name;
-    u_int8_t return_type;
+    std::string nodeType = "funcdecl";
+    u_int8_t type;
     int lineno;
 
     void AddChild(AST *child) override
@@ -587,18 +599,25 @@ class FuncDecl : public Decl
     public:
     FuncDecl(int line, const char* const id) : lineno(line), name(std::string(id)) {};
 
-    void AddNode(AST *node) override
-    {
-        AddChild(node);
+    std::string getNodeType() override {
+        return nodeType;
     }
 
-    void SetRT(u_int8_t rt) {
-        return_type = rt;
+    std::string getName() override {
+        return name;
+    }
+
+    std::string getType() override {
+        return getReserved(type);
+    }
+
+    void AddNode(AST *node) override {
+        AddChild(node);
     }
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Function Declaration {'return type': " << getReserved(return_type) << ", 'id': " << name  << ", 'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Function Declaration {'return type': " << getReserved(type) << ", 'id': " << name  << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -608,13 +627,14 @@ class FuncDecl : public Decl
     }
 };
 
-class Param : public Decl
+class Param : public AST
 {
     protected:
     std::string name;
+    std::string nodeType = "param";
     u_int8_t type;
     int lineno;
-    Param* next;
+    AST* next;
 
     void AddChild(AST *child) override
     {
@@ -625,16 +645,11 @@ class Param : public Decl
     public:
     Param(int line, u_int8_t t, const char* const id) : lineno(line), name(std::string(id)), type(t) {};
 
-    bool hasNext() {
-        if (next != NULL) {
-            return true;
-        }
-        else {
-            return false;
-        }
+    std::string getNodeType() override {
+        return nodeType;
     }
 
-    std::string GetName() {
+    std::string getName() override {
         return name;
     }
 
@@ -643,17 +658,17 @@ class Param : public Decl
         AddChild(node);
     }
 
-    void SetNext(Param * n) {
+    void setNext(AST * n) override {
         next = n;
     }
 
-    Param* GetNext() {
+    AST* GetNext() {
         return next;
     }
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Formal Parameter {'type': " << getReserved(type) << ", 'id': " << name << ", 'lineno': " << lineno  << "}" << "\n";
+        std::cout << "--Formal Parameter {'type': " << getReserved(type) << ", 'id': " << name << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (int i = children.size(); i --> 0;)
         {
@@ -663,58 +678,10 @@ class Param : public Decl
     }
 };
 
-class Exp : public AST {
-
-    protected:
-    void AddChild(AST *child) override
-    {
-        children.push_back(child);
-
-    }
-
-    Exp * next;
-
-    public:
-
-    bool hasNext() {
-        if (next != NULL) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-    void setNext(Exp *node) {
-        next = node;
-    }
-
-    Exp * getNext() {
-        return next;
-    }
-
-    void AddNode(AST *node) override
-    {
-        AddChild(node);
-    }
-
-    void Print() override
-    {
-        std::cout << "--Exp {}" << std::endl;
-        std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        INDENTS++;
-        for (int i = children.size(); i --> 0;)
-        {
-            children[i]->Print();
-        }
-        INDENTS--;
-
-    }
-};
-
-class Num : public Exp {
+class Num : public AST {
   protected:
     int value, lineno;
+    std::string nodeType = "num";
 
     void AddChild(AST *child) override
     {
@@ -725,6 +692,10 @@ class Num : public Exp {
   public:
     Num(int line, int val) : lineno(line), value(val) {}
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -732,7 +703,7 @@ class Num : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Num {'value': " << value << ", 'lineno': " << lineno  << "}" << "\n";
+        std::cout << "--Num {'value': " << value << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -742,10 +713,11 @@ class Num : public Exp {
     }
 };
 
-class Literal : public Exp {
+class Literal : public AST {
   protected:
     u_int8_t value;
     int lineno;
+    std::string nodeType = "literal";
 
     void AddChild(AST *child) override
     {
@@ -756,6 +728,10 @@ class Literal : public Exp {
   public:
     Literal(int line, u_int8_t val) : lineno(line), value(val) {}
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -763,7 +739,7 @@ class Literal : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Literal {'value': " << getReserved(value)  << ", 'lineno': " << lineno  << "}" << "\n";
+        std::cout << "--Literal {'value': " << getReserved(value)  << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -773,9 +749,9 @@ class Literal : public Exp {
     }
 };
 
-class String : public Exp {
+class String : public AST {
   protected:
-    std::string value;
+    std::string value, nodeType = "string";
     int lineno;
 
     void AddChild(AST *child) override
@@ -787,6 +763,10 @@ class String : public Exp {
   public:
     String(int line, const char* const val) : lineno(line), value(val) {}
     
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -794,7 +774,7 @@ class String : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--String Literal {'value': " << value << ", 'lineno': " << lineno << "}" << "\n";
+        std::cout << "--String Literal {'value': " << value << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -804,9 +784,9 @@ class String : public Exp {
     }
 };
 
-class Id : public Exp {
+class Id : public AST {
   protected:
-    std::string id;
+    std::string id, nodeType = "id";
     int lineno;
 
     void AddChild(AST *child) override
@@ -815,30 +795,24 @@ class Id : public Exp {
 
     }
 
-    Exp* next;
+    AST* next;
 
   public:
     Id(int line, const char* const value) : lineno(line), id(std::string(value)) {}
 
-    bool hasNext() {
-        if (next != NULL) {
-            return true;
-        }
-        else {
-            return false;
-        }
+    std::string getNodeType() override {
+        return nodeType;
     }
 
-    void setNext(Exp *node) {
+    void setNext(AST *node) override {
         next = node;
     }
 
-    Exp * getNext() {
+    AST * getNext() override {
         return next;
     }
 
-    void AddNode(AST *node) override
-    {
+    void AddNode(AST *node) override {
         AddChild(node);
     }
 
@@ -846,7 +820,7 @@ class Id : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Id {'name': " << id << ", 'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Id {'name': " << id << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -856,10 +830,11 @@ class Id : public Exp {
     }
 };
 
-class Compare : public Exp {
+class Compare : public AST {
   protected:
     u_int8_t type;
     int lineno;
+    std::string nodeType = "compare";
 
     void AddChild(AST *child) override
     {
@@ -867,11 +842,15 @@ class Compare : public Exp {
 
     }
 
-    Exp * before;
-    Exp * after;
+    AST * before;
+    AST * after;
 
   public:
-    Compare(int line, u_int8_t t, Exp* b, Exp* a) : lineno(line), type(t), before(b), after(a) {}
+    Compare(int line, u_int8_t t, AST* b, AST* a) : lineno(line), type(t), before(b), after(a) {}
+
+    std::string getNodeType() override {
+        return nodeType;
+    }
 
     void AddNode(AST *node) override
     {
@@ -880,7 +859,7 @@ class Compare : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Comparison operator {'type': " << getOper(type) << ", 'lineno': " << lineno << " }" << "\n";
+        std::cout << "--Comparison operator {'type': " << getOper(type) << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << " }" << "\n";
         INDENTS++;
         before->Print();
         after->Print();
@@ -892,10 +871,11 @@ class Compare : public Exp {
     }
 };
 
-class Arithmetic : public Exp {
+class Arithmetic : public AST {
   protected:
     u_int8_t type;
     int lineno;
+    std::string nodeType = "arithmetic";
 
     void AddChild(AST *child) override
     {
@@ -903,12 +883,16 @@ class Arithmetic : public Exp {
 
     }
 
-    Exp * before;
-    Exp * after;
+    AST * before;
+    AST * after;
 
   public:
-    Arithmetic(int line, u_int8_t t, Exp* a) : lineno(line), type(t), after(a) {}
-    Arithmetic(int line, u_int8_t t, Exp* b, Exp*a) : lineno(line), type(t), before(b), after(a) {}
+    Arithmetic(int line, u_int8_t t, AST* a) : lineno(line), type(t), after(a) {}
+    Arithmetic(int line, u_int8_t t, AST* b, AST*a) : lineno(line), type(t), before(b), after(a) {}
+
+    std::string getNodeType() override {
+        return nodeType;
+    }
 
     void AddNode(AST *node) override
     {
@@ -917,7 +901,7 @@ class Arithmetic : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Arithmetic operator {'type': " << getOper(type) << ", 'lineno': " << lineno << " }" << "\n";
+        std::cout << "--Arithmetic operator {'type': " << getOper(type) << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << " }" << "\n";
         INDENTS++;
         if (before != NULL) {
             before->Print();
@@ -931,10 +915,11 @@ class Arithmetic : public Exp {
     }
 };
 
-class Logical : public Exp {
+class Logical : public AST {
   protected:
     u_int8_t type;
     int lineno;
+    std::string nodeType = "logical";
 
     void AddChild(AST *child) override
     {
@@ -942,12 +927,16 @@ class Logical : public Exp {
 
     }
 
-    Exp * before;
-    Exp * after;
+    AST * before;
+    AST * after;
 
   public:
-    Logical(int line, u_int8_t t, Exp* a) : lineno(line), type(t), after(a) {}
-    Logical(int line, u_int8_t t, Exp* b, Exp*a) : lineno(line), type(t), before(b), after(a) {}
+    Logical(int line, u_int8_t t, AST* a) : lineno(line), type(t), after(a) {}
+    Logical(int line, u_int8_t t, AST* b, AST*a) : lineno(line), type(t), before(b), after(a) {}
+
+    std::string getNodeType() override {
+        return nodeType;
+    }
 
     void AddNode(AST *node) override
     {
@@ -956,7 +945,7 @@ class Logical : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Logical operator {'type': " << getOper(type) << ", 'lineno': " << lineno << " }" << "\n";
+        std::cout << "--Logical operator {'type': " << getOper(type) << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << " }" << "\n";
         INDENTS++;
         if (before != NULL) {
             before->Print();
@@ -970,9 +959,9 @@ class Logical : public Exp {
     }
 };
 
-class FuncCall : public Exp {
+class FuncCall : public AST {
   protected:
-    std::string id;
+    std::string id, nodeType = "funccall";
     int lineno;
 
     void AddChild(AST *child) override
@@ -984,6 +973,10 @@ class FuncCall : public Exp {
   public:
     FuncCall(int line, const char* const value) : lineno(line), id(std::string(value)) {}
 
+    std::string getNodeType() override {
+        return nodeType;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -991,7 +984,7 @@ class FuncCall : public Exp {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Function Invocation {'name': " << id << ", 'lineno': " << lineno << "}" << "\n";
+        std::cout << "--Function Invocation {'name': " << id << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         std::cout << std::string(INDENTS*2, INDENT_CHAR) << "Arguments:\n";
         for (int i = children.size(); i --> 0;)
