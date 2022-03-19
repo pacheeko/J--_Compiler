@@ -47,11 +47,12 @@ int main(int argc, char **argv) {
         if (file.is_open()) file.close();
         return 1;
     }
+    root->reverseChildren();
 
     root = semanticAnalyzer(root);
     if (errors > 0) {
         std::cerr << errors << " error(s) found. Exiting." << std::endl;
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
     std::cout << "Parse Complete! Printing AST..." << std::endl;
     root->Print();  //Prints out the entire abstract syntax tree

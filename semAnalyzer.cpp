@@ -29,6 +29,7 @@ messages as they occur. Checks for errors based on the following semantic inform
 #include <fstream>
 #include "vector"
 #include <unordered_map>
+#include <stack> 
 using namespace std;
 #include "ast.hpp"
 
@@ -37,11 +38,13 @@ struct entry {
     int scope;
     string type;
     void* attr;
+    string nodeType;
 };
-static int errors = 0;
-static int scope = 0;
 static vector<unordered_map<string, entry>> symTables;
 static vector<unordered_map<string,entry>*> scopeStack;
+static int whileLoops = 0, numOfBlocks = 0, scope = 0, errors = 0;
+static bool before = true;
+
 
 //Functions
 inline AST* semanticAnalyzer(AST* root);
@@ -64,53 +67,179 @@ inline AST* semanticAnalyzer(AST* root) {
     scopeStack.push_back(&symTables.at(1));
     addPreDefined();
     //First pass, checks for semantic checks 1 and 2
+    scope = 1;
     postOrderTrav(root, &firstPass);
     checkForMain(*scopeStack.at(1));
-    scope = 0;
+    scope = 1;
     //Second pass, checks for semantic checks 3,13,14
     prePostTrav(root, &secondPass);
     return root;
 }
 
 inline AST* postOrderTrav(AST* root, AST* (*func)(AST *)) {
-    scope++;
+    bool scopeChange = false;
+    if ((root->getNodeType() == "maindecl") || (root->getNodeType() == "funcDecl")) {
+        scope++;
+        scopeChange = true;
+        }
     for (AST* node : root->getChildren()) {
         postOrderTrav(node, func);
     }
-    scope--;
+    if (scopeChange) {
+        scope--;
+    }
     func(root);
     return root;
 };
 
 inline AST* preOrderTrav(AST* root, AST* (*func)(AST *)) {
     func(root);
+    bool scopeChange = false;
+    if ((root->getNodeType() == "maindecl") || (root->getNodeType() == "funcDecl")) {
+        scope++;
+        scopeChange = true;
+        }
     for (AST* node : root->getChildren()) {
         preOrderTrav(node, func);
+    }
+    if (scopeChange) {
+        scope--;
     }
     return root;
 };
 
 inline AST* prePostTrav(AST* root, AST* (*func)(AST *)) {
+    before = true;
     func(root);
+    bool scopeChange = false;
     for (AST* node : root->getChildren()) {
-        preOrderTrav(node, func);
+        prePostTrav(node, func);
     }
+    before = false;
     func(root);
     return root;
 };
 
 inline AST* firstPass(AST* node) {
     if (scope == 1) {
-        entry newEntry = {.scope = 1, .type = node->getType()};
-        scopeStack.at(1)->insert({node->getName(), newEntry});
-        auto loc = scopeStack.at(1)->at(node->getName());
-        node->setLoc(&loc);
+        if (node->getNodeType() == "vardecl") {
+            entry newEntry = {.scope = 1, .type = node->getType(), .nodeType = node->getNodeType()};
+            if (!scopeStack.at(1)->insert({node->getName(), newEntry}).second) {
+                cerr << "Error: A global variable was re-declared near line: " << node->getLineNo() << "." << endl;
+                errors++;
+            };
+            auto loc = scopeStack.at(1)->at(node->getName());
+            node->setLoc(&loc);
+        }
+        else if (node->getNodeType() == "maindecl" || node->getNodeType() == "funcdecl") {
+            unordered_map<string, entry> funcTable;
+            symTables.push_back(funcTable);
+            entry newEntry = {.scope = 1, .type = node->getType(), .attr = &symTables.back(), .nodeType = node->getNodeType()};
+            if (!scopeStack.at(1)->insert({node->getName(), newEntry}).second) {
+                cerr << "Error: A function was re-declared near line: " << node->getLineNo() << "." << endl;
+                errors++;
+            };
+            auto loc = scopeStack.at(1)->at(node->getName());
+            node->setLoc(&loc);
+        }
     }
         return node;
 };
 
 inline AST* secondPass(AST* node) {
-    //
+    // Semantic check 13: check if node has already been identified in the same scope
+    
+    if (node->getNodeType() == "block") {
+        if (before) {
+            numOfBlocks++;
+        }
+        else {
+            numOfBlocks--;
+        }
+    }
+
+    else if (node->getNodeType() == "vardecl" && before) {
+        if (scope > 1) {
+            if (numOfBlocks > 1) {
+                cerr << "Error: A local declaration was not in an outermost block near line: " << node->getLineNo() << "." << endl;
+                errors++;
+            }
+            entry newEntry = {.scope = scope, .type = node->getType(), .nodeType = node->getNodeType()};
+            if (!scopeStack.back()->insert({node->getName(), newEntry}).second) {
+                    cerr << "Error: Variable redeclaration in same scope around line: " << node->getLineNo() << "." << endl;
+                    errors++;
+            }
+        }
+    }
+
+    else if (node->getNodeType() == "maindecl" || node->getNodeType() == "funcdecl") {
+        if (before) {
+            unordered_map<string,entry>* ptr = (unordered_map<string,entry> *) scopeStack.at(1)->at(node->getName()).attr;
+            scopeStack.push_back(ptr);
+            scope++;
+        }
+        else {
+            scope--;
+            scopeStack.pop_back();
+        }
+    }
+
+    else if (node->getNodeType() == "funccall" && before) {
+        int size = scopeStack.size() - 1;
+        bool exists = false;
+        for (int i = size; i >= 0; i--) {
+            if (scopeStack.at(size)->find(node->getName()) != scopeStack.at(size)->end()) {
+                i = -1;
+                exists = true;
+            }
+        }
+        if (!exists) {
+            cerr << "Error: Function called that was never declared around line: " << node->getLineNo() << "." << endl;
+            errors++;
+        }
+    }
+
+    /*
+    ||
+        (node->getNodeType() == "else") ||
+        (node->getNodeType() == "while") ||
+        (node->getNodeType() == "block")) {
+
+
+        }
+
+    else if ((node->getNodeType() == "null") ||
+             (node->getNodeType() == "return") ||
+             (node->getNodeType() == "break")) {
+
+             }
+    
+    else if ((node->getNodeType() == "id") ||
+             (node->getNodeType() == "num") ||
+             (node->getNodeType() == "literal") ||
+             (node->getNodeType() == "string") ||
+             (node->getNodeType() == "param") ||
+             (node->getNodeType() == "vardecl") ||
+             (node->getNodeType() == "funcCall") ||
+             (node->getNodeType() == "assnstmt")) {
+
+             }
+
+    else if ((node->getNodeType() == "maindecl") ||
+             (node->getNodeType() == "funcDecl")) {
+
+             }
+
+    else if ((node->getNodeType() == "arithmetic") ||
+             (node->getNodeType() == "compare") ||
+             (node->getNodeType() == "logical")) {
+
+             }
+    */
+    else {
+
+    }
+
     return node;
 };
 
@@ -167,7 +296,7 @@ inline void checkForMain(unordered_map<string, entry> global) {
     int mains = 0;
 
     for (auto& ent : global) {
-        if (ent.second.type.compare("") == 0) {
+        if (ent.second.nodeType == "maindecl") {
             mains++;
         }
     }

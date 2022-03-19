@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #define INDENT_CHAR ' '
 extern int INDENTS;
 
@@ -73,6 +74,7 @@ class AST;
     class Compare;
     class Logical;
     class FuncCall;
+    class String;
 
     class MainDecl;
     class FuncDecl;
@@ -118,6 +120,10 @@ class AST
         next = ast;
     }
 
+    virtual int getLineNo() {
+        return lineno;
+    }
+
     virtual std::string getType() {
         return "";
     }
@@ -136,6 +142,12 @@ class AST
 
     virtual void setLoc(void* loc) {
         memoryLoc = loc;
+    }
+
+    virtual void reverseChildren() {
+        for (auto child : children) {   
+            child->reverseChildren();
+        }
     }
 
     AST() = default;
@@ -173,14 +185,20 @@ class Prog : public AST
         AddChild(node);
     }
 
+    void reverseChildren() override {
+        std::reverse(children.begin(), children.end());
+        for (auto child : children) {   
+            child->reverseChildren();
+        }
+    }
+
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Program: {'filename': " << prog_name << "}" << "\n";
         INDENTS++;
-        for (int i = children.size(); i --> 0;)
-        {   
-            children[i]->Print();
+        for (auto child : children) {   
+            child->Print();
         }
         INDENTS--;
 
@@ -204,6 +222,10 @@ class IfStmt : public AST {
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     void AddNode(AST *node) override
@@ -241,6 +263,10 @@ class ElseStmt : public AST {
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     void AddNode(AST *node) override
@@ -282,6 +308,10 @@ class WhileStmt : public AST {
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -319,20 +349,30 @@ class Block : public AST {
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
+    }
+
+    void reverseChildren() override {
+        std::reverse(children.begin(), children.end());
+        for (auto child : children) {   
+            child->reverseChildren();
+        }
     }
 
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Block: {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
-
         INDENTS++;
-        for (int i = children.size(); i --> 0;)
+        for (auto child : children)
         {
-            children[i]->Print();
+            child->Print();
         }
         INDENTS--;
     }
@@ -358,6 +398,10 @@ class AssnStmt : public AST {
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     void AddNode(AST *node) override
@@ -397,6 +441,10 @@ class NullStmt : public AST {
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -434,6 +482,10 @@ class BreakStmt : public AST {
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -456,7 +508,7 @@ class RetStmt : public AST {
 
     protected:
     int lineno;
-    std::string nodeType = "ret";
+    std::string nodeType = "return";
 
     void AddChild(AST *child) override
     {
@@ -470,6 +522,10 @@ class RetStmt : public AST {
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     void AddNode(AST *node) override
@@ -511,6 +567,10 @@ class MainDecl : public AST
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     std::string getName() override {
         return name;
     }
@@ -524,8 +584,15 @@ class MainDecl : public AST
         AddChild(node);
     }
 
+    void reverseChildren() override {
+        std::reverse(children.begin(), children.end());
+        for (auto child : children) {   
+            child->reverseChildren();
+        }
+    }
+
     void Print() override {
-          std::cout << std::string(INDENTS*2, INDENT_CHAR);
+        std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Main Function Declaration: {'name': " << name << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
         for (auto child : children)
@@ -559,6 +626,10 @@ class VarDecl : public AST
 
     std::string getName() override {
         return name;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     std::string getType() override {
@@ -603,6 +674,10 @@ class FuncDecl : public AST
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     std::string getName() override {
         return name;
     }
@@ -613,6 +688,13 @@ class FuncDecl : public AST
 
     void AddNode(AST *node) override {
         AddChild(node);
+    }
+
+    void reverseChildren() override {
+        std::reverse(children.begin(), children.end());
+        for (auto child : children) {   
+            child->reverseChildren();
+        }
     }
 
     void Print() override {
@@ -647,6 +729,10 @@ class Param : public AST
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     std::string getName() override {
@@ -696,6 +782,10 @@ class Num : public AST {
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -730,6 +820,10 @@ class Literal : public AST {
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     void AddNode(AST *node) override
@@ -767,6 +861,10 @@ class String : public AST {
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -802,6 +900,10 @@ class Id : public AST {
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     void setNext(AST *node) override {
@@ -852,6 +954,10 @@ class Compare : public AST {
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -892,6 +998,10 @@ class Arithmetic : public AST {
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     void AddNode(AST *node) override
@@ -938,6 +1048,10 @@ class Logical : public AST {
         return nodeType;
     }
 
+    int getLineNo() override {
+        return lineno;
+    }
+
     void AddNode(AST *node) override
     {
         AddChild(node);
@@ -975,6 +1089,10 @@ class FuncCall : public AST {
 
     std::string getNodeType() override {
         return nodeType;
+    }
+
+    int getLineNo() override {
+        return lineno;
     }
 
     void AddNode(AST *node) override

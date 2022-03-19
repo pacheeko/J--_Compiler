@@ -1,0 +1,11 @@
+int a;
+main() {
+    int b;
+
+    int b;
+    while(true) {
+
+    }
+
+    func1();
+}
