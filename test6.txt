@@ -1,11 +1,13 @@
 int a;
 main() {
-    int b;
+    boolean b;
+    b = true;
+    while(b) {
 
-    func2(b, b);
-    prints(b);
+    }
+    break;
 }
 
-void func2(int hello, boolean c) {
-
+int func2(int hello, boolean c) {
+    return 0;
 }

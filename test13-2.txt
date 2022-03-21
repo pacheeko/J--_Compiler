@@ -1,0 +1,7 @@
+int a;
+
+main() {
+    int b;
+    boolean b;
+    return;
+}

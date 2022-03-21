@@ -83,6 +83,7 @@ inline AST* semanticAnalyzer(AST* root) {
     //Second pass, checks for semantic checks 3,13,14
     prePostTrav(root, &secondPass);
     prePostTrav(root, &thirdPass);
+    prePostTrav(root, &fourthPass);
     return root;
 }
 
@@ -236,6 +237,9 @@ inline AST* thirdPass(AST* node) {
     4. The number/type of arguments in a function call doesn't match the function's declaration.
     5. The main function can't be called.
     7. Type mismatch for an operator (||, &&, ==, !=, =, <, >, <=, >=, +, - (unary and binary), *, /, %, !).
+    8. No return statement in a non-void function.
+    9. A void function can't return a value.
+    10. A non-void function must return a value. Note that you're only checking for the existence of an appropriate return statement at the semantic checking stage, not whether it's actually executed.
     11. A value returned from a function has the wrong type.
     12. An if- or while-condition must be of Boolean type.
     */
@@ -262,8 +266,20 @@ inline AST* thirdPass(AST* node) {
         }
         //Semantic check 4
         else {
+            int funcCallParams = node->getChildren().size();
+            int funcDeclParams = 0;
             unordered_map<string, entry> * funcTable = funcDecl.symTable;
-            for (int parNum = 1; parNum <= node->getChildren().size(); parNum++) {
+            for (auto& it : *funcTable) {
+                if (it.second.nodeType == "param") {
+                    funcDeclParams++;
+                }
+            }
+            if (funcCallParams != funcDeclParams) {
+                cerr << "Error: Function invocation near line " << node->getLineNo() << " uses " << funcCallParams << " argument(s) when it should use " << funcDeclParams << " argument(s)." << endl;
+                errors++;
+            }
+
+            for (int parNum = 1; parNum <= funcCallParams; parNum++) {
                 string nodeType = node->getChildren().at(parNum-1)->getNodeType();
                 string type;
                 if (nodeType == "string") {
@@ -272,12 +288,14 @@ inline AST* thirdPass(AST* node) {
                 else {
                     type = getIdType(node->getChildren().at(parNum-1)->getName());
                 }
-                for (auto& it : *funcTable) {
-                    if (it.second.paramNum == parNum) {
-                        if (!(type == it.second.type)) {
-                            cerr << "Error: Wrong type used in function call near line: " << node->getLineNo() << ". ";
-                            cerr << type << " used instead of " << it.second.type << "." << endl;
-                            errors++;
+                if (type != "") {
+                    for (auto& it : *funcTable) {
+                        if (it.second.paramNum == parNum) {
+                            if (!(type == it.second.type)) {
+                                cerr << "Error: Wrong type used in function call near line: " << node->getLineNo() << ". ";
+                                cerr << type << " used instead of " << it.second.type << "." << endl;
+                                errors++;
+                            }
                         }
                     }
                 }
@@ -285,12 +303,73 @@ inline AST* thirdPass(AST* node) {
         }
     }
 
-    // Update scope stack for the current function declaration
+    /* Update scope stack for the current function declaration
+    Semantic checks:
+    8. No return statement in a non-void function.
+    9. A void function can't return a value.
+    10. A non-void function must return a value. Note that you're only checking for the existence of an appropriate return statement at the semantic checking stage, not whether it's actually executed.
+    11. A value returned from a function has the wrong type.
+    */
     else if (node->getNodeType() == "maindecl" || node->getNodeType() == "funcdecl") {
         if (before) {
             unordered_map<string, entry>* ptr = scopeStack.at(1)->at(node->getName()).symTable;
             scopeStack.push_back(ptr);
             scope++;
+
+            string returnType = node->getType();
+            bool retStmt = false;
+            for (auto child : node->getChildren()) {
+                if (child->getNodeType() == "block") {
+                    for (auto blockChild : child->getChildren()) {
+                        if (blockChild->getNodeType() == "return") {
+                            retStmt = true;
+                            if (blockChild->getChildren().empty()) {
+                                //10. A non-void function must return a value.
+                                if (returnType == "int" || returnType == "boolean") {
+                                    cerr << "Error: Non-void function of type " << returnType << " does not return a value near line: " << node->getLineNo() << ". " << endl;
+                                    errors++;
+                                }
+                            }
+                            else {
+                                string retValue = blockChild->getChildren().at(0)->getType();
+                                if (retValue == "") {
+                                    retValue = getIdType(blockChild->getChildren().at(0)->getName());
+                                    if (retValue == "") {
+                                        cerr << "Error: Function returns undeclared variable " << blockChild->getChildren().at(0)->getName() << " near line: " << node->getLineNo() << ". " << endl;
+                                        errors++;
+                                    }
+                                }
+
+                                //9. A void function can't return a value.
+                                if (returnType == "void") {
+                                    cerr << "Error: Void function returns non-void type " << retValue << " near line: " << node->getLineNo() << ". " << endl;
+                                    errors++;
+                                }
+                                //9. A void function can't return a value.
+                                else if (returnType == "") {
+                                    cerr << "Error: Main function returns non-void type " << retValue << " near line: " << node->getLineNo() << ". " << endl;
+                                    errors++;
+                                }
+                                //11. A value returned from a function has the wrong type.
+                                else {
+                                    if (!(returnType == retValue)) {
+                                    cerr << "Error: Non-void function returns type " << retValue << " when it should return type " << returnType << " near line: " << node->getLineNo() << ". " << endl;
+                                    errors++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (retStmt == false) {
+                //8. No return statement in a non-void function.
+                if (returnType == "int" || returnType == "boolean") {
+                    cerr << "Error: Non-void function of type " << returnType << " does not return a value near line: " << node->getLineNo() << ". " << endl;
+                    errors++;                    
+                }
+            }
+
         }
         else {
             scope--;
@@ -302,6 +381,25 @@ inline AST* thirdPass(AST* node) {
 };
 
 inline AST* fourthPass(AST* node) {
+    //6. Break statements must be inside a while statement.
+    if (before) {
+        if (node->getNodeType() == "while") {
+            whileLoops ++;
+        }
+        else if (node->getNodeType() == "break") {
+            if (whileLoops < 1) {
+                cerr << "Error: Break statemenout outside while statement near line: " << node->getLineNo() << ". " << endl;
+                errors++;  
+            }
+        }
+    }
+    else {
+        if (node->getNodeType() == "while") {
+            whileLoops --;
+        }
+    }
+
+
     return node;
 };
 

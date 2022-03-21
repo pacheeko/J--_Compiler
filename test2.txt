@@ -1,1 +1,10 @@
 int a;
+
+main() {
+    return;
+}
+
+anotherMain() {
+    int b;
+    b = 5;
+}

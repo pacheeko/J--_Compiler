@@ -1,0 +1,14 @@
+int a;
+boolean b;
+int c;
+
+main() {
+    a = 5;
+    b = true;
+    c = notmain(b,a);
+
+}
+
+int notmain(int param) {
+    return 5;
+}

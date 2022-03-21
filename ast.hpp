@@ -833,6 +833,10 @@ class Num : public AST {
         AddChild(node);
     }
 
+    std::string getType() override {
+        return "int";
+    }
+
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Num {'value': " << value << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
@@ -871,6 +875,16 @@ class Literal : public AST {
     void AddNode(AST *node) override
     {
         AddChild(node);
+    }
+
+    std::string getType() override {
+        std::string type = getReserved(value);
+        if (type == "true" || type == "false") {
+            return "boolean";
+        }
+        else {
+            return "";
+        }
     }
 
     void Print() override {
@@ -1157,13 +1171,20 @@ class FuncCall : public AST {
         return id;
     }
 
+    void reverseChildren() override {
+        std::reverse(children.begin(), children.end());
+        for (auto child : children) {   
+            child->reverseChildren();
+        }
+    }
+
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Function Invocation {'name': " << id << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
-        for (int i = children.size(); i --> 0;)
+        for (auto child : children)
         {
-            children[i]->Print();
+            child->Print();
         }
         INDENTS--;
     }

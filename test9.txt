@@ -1,0 +1,13 @@
+boolean b;
+
+main() {
+
+}
+
+void func() {
+    return 0;
+}
+
+void func2() {
+    return true;
+}

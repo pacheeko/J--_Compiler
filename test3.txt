@@ -1,4 +1,11 @@
 int a;
+boolean b;
 main() {
 
+}
+
+void func1() {
+    while (b) {
+        int c;
+    }
 }

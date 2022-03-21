@@ -2,10 +2,9 @@ int a;
 main() {
     int b;
 
-    int b;
-    while(true) {
+    main();
+}
 
-    }
+void func2(int hello) {
 
-    func1();
 }

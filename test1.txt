@@ -1,7 +1,7 @@
-main() {
+boolean a;
+int b;
 
-}
-
-notmain() {
-    
+int func() {
+    b = 1;
+    return b;
 }
