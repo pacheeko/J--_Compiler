@@ -30,19 +30,22 @@ messages as they occur. Checks for errors based on the following semantic inform
 #include "vector"
 #include <unordered_map>
 #include <stack> 
+#include <memory>
 using namespace std;
 #include "ast.hpp"
 
 //Data structures
 struct entry {
     int scope;
+    int paramNum;
     string type;
-    void* attr;
+    unordered_map<string,entry>* symTable;
     string nodeType;
+    string attr;
 };
-static vector<unordered_map<string, entry>> symTables;
+static unordered_map<string, entry> symTables[30];
 static vector<unordered_map<string,entry>*> scopeStack;
-static int whileLoops = 0, numOfBlocks = 0, scope = 0, errors = 0;
+static int whileLoops = 0, numOfBlocks = 0, scope = 0, errors = 0, symIt = 0;
 static bool before = true;
 
 
@@ -57,15 +60,21 @@ inline AST* thirdPass(AST* node);
 inline AST* fourthPass(AST* node); 
 inline void addPreDefined();
 inline void checkForMain(unordered_map<string, entry> global);
+inline string getIdType(string name);
 
 inline AST* semanticAnalyzer(AST* root) {
     unordered_map<string, entry> preDefined;
-    symTables.push_back(preDefined);
-    scopeStack.push_back(&symTables.at(0));
-    unordered_map<string, entry> globalStack;
-    symTables.push_back(globalStack);
-    scopeStack.push_back(&symTables.at(1));
+    symTables[symIt] = preDefined;
+    unordered_map<string, entry>* prePtr = &symTables[symIt];
+    symIt++;
+    scopeStack.push_back(prePtr);
     addPreDefined();
+    unordered_map<string, entry> globalStack;
+    symTables[symIt] = globalStack;
+    unordered_map<string, entry>* globalPtr = &symTables[symIt];
+    symIt++;
+    scopeStack.push_back(globalPtr);
+
     //First pass, checks for semantic checks 1 and 2
     scope = 1;
     postOrderTrav(root, &firstPass);
@@ -73,6 +82,7 @@ inline AST* semanticAnalyzer(AST* root) {
     scope = 1;
     //Second pass, checks for semantic checks 3,13,14
     prePostTrav(root, &secondPass);
+    prePostTrav(root, &thirdPass);
     return root;
 }
 
@@ -121,6 +131,7 @@ inline AST* prePostTrav(AST* root, AST* (*func)(AST *)) {
 };
 
 inline AST* firstPass(AST* node) {
+    // Semantic check 13 for global scope. Also sets up symbol tables for function declarations and global variables
     if (scope == 1) {
         if (node->getNodeType() == "vardecl") {
             entry newEntry = {.scope = 1, .type = node->getType(), .nodeType = node->getNodeType()};
@@ -133,22 +144,22 @@ inline AST* firstPass(AST* node) {
         }
         else if (node->getNodeType() == "maindecl" || node->getNodeType() == "funcdecl") {
             unordered_map<string, entry> funcTable;
-            symTables.push_back(funcTable);
-            entry newEntry = {.scope = 1, .type = node->getType(), .attr = &symTables.back(), .nodeType = node->getNodeType()};
+            symTables[symIt] = funcTable;
+            entry newEntry = {.scope = 1, .type = node->getType(), .symTable = &symTables[symIt], .nodeType = node->getNodeType()};
             if (!scopeStack.at(1)->insert({node->getName(), newEntry}).second) {
                 cerr << "Error: A function was re-declared near line: " << node->getLineNo() << "." << endl;
                 errors++;
             };
             auto loc = scopeStack.at(1)->at(node->getName());
             node->setLoc(&loc);
+            symIt++;
         }
     }
         return node;
 };
 
 inline AST* secondPass(AST* node) {
-    // Semantic check 13: check if node has already been identified in the same scope
-    
+    // Semantic checks 3, 13, 14: check if node has already been identified in the same scope
     if (node->getNodeType() == "block") {
         if (before) {
             numOfBlocks++;
@@ -158,12 +169,14 @@ inline AST* secondPass(AST* node) {
         }
     }
 
-    else if (node->getNodeType() == "vardecl" && before) {
+    else if (before && (node->getNodeType() == "vardecl")) {
         if (scope > 1) {
+            // Semantic check 3: A local declaration was not in an outermost block.
             if (numOfBlocks > 1) {
                 cerr << "Error: A local declaration was not in an outermost block near line: " << node->getLineNo() << "." << endl;
                 errors++;
             }
+            // Semantic check 13: identifier is redefined within the same scope.
             entry newEntry = {.scope = scope, .type = node->getType(), .nodeType = node->getNodeType()};
             if (!scopeStack.back()->insert({node->getName(), newEntry}).second) {
                     cerr << "Error: Variable redeclaration in same scope around line: " << node->getLineNo() << "." << endl;
@@ -171,10 +184,10 @@ inline AST* secondPass(AST* node) {
             }
         }
     }
-
+    // Update scope stack for the current function declaration
     else if (node->getNodeType() == "maindecl" || node->getNodeType() == "funcdecl") {
         if (before) {
-            unordered_map<string,entry>* ptr = (unordered_map<string,entry> *) scopeStack.at(1)->at(node->getName()).attr;
+            unordered_map<string, entry>* ptr = scopeStack.at(1)->at(node->getName()).symTable;
             scopeStack.push_back(ptr);
             scope++;
         }
@@ -183,67 +196,108 @@ inline AST* secondPass(AST* node) {
             scopeStack.pop_back();
         }
     }
-
-    else if (node->getNodeType() == "funccall" && before) {
+    // Sematic check 14: An undeclared identifier is used.
+    else if (before && ((node->getNodeType() == "funccall") || (node->getNodeType() == "id"))) { 
         int size = scopeStack.size() - 1;
         bool exists = false;
         for (int i = size; i >= 0; i--) {
-            if (scopeStack.at(size)->find(node->getName()) != scopeStack.at(size)->end()) {
+            if (scopeStack.at(i)->find(node->getName()) != scopeStack.at(i)->end()) {
                 i = -1;
                 exists = true;
-            }
+            }    
         }
         if (!exists) {
-            cerr << "Error: Function called that was never declared around line: " << node->getLineNo() << "." << endl;
+            if (node->getNodeType() == "funccall") {
+                cerr << "Error: Function called that was never declared around line: " << node->getLineNo() << "." << endl;
+                errors++;
+            }
+            else if (node->getNodeType() == "id") {
+                cerr << "Error: Identifier used that was never declared around line: " << node->getLineNo() << "." << endl;
+                errors++;
+            }
+        }
+        
+    }
+    // Add Params to local function symbol table if inside function
+    else if (before && (node->getNodeType() == "param")) {
+        entry newEntry = {.scope = scope, .paramNum = node->getParamNum(), .type = node->getType(), .nodeType = node->getNodeType()};
+        if (!scopeStack.at(scope)->insert({node->getName(), newEntry}).second) {
+            cerr << "Error: Param reused in same function near line: " << node->getLineNo() << "." << endl;
             errors++;
         }
-    }
-
-    /*
-    ||
-        (node->getNodeType() == "else") ||
-        (node->getNodeType() == "while") ||
-        (node->getNodeType() == "block")) {
-
-
-        }
-
-    else if ((node->getNodeType() == "null") ||
-             (node->getNodeType() == "return") ||
-             (node->getNodeType() == "break")) {
-
-             }
-    
-    else if ((node->getNodeType() == "id") ||
-             (node->getNodeType() == "num") ||
-             (node->getNodeType() == "literal") ||
-             (node->getNodeType() == "string") ||
-             (node->getNodeType() == "param") ||
-             (node->getNodeType() == "vardecl") ||
-             (node->getNodeType() == "funcCall") ||
-             (node->getNodeType() == "assnstmt")) {
-
-             }
-
-    else if ((node->getNodeType() == "maindecl") ||
-             (node->getNodeType() == "funcDecl")) {
-
-             }
-
-    else if ((node->getNodeType() == "arithmetic") ||
-             (node->getNodeType() == "compare") ||
-             (node->getNodeType() == "logical")) {
-
-             }
-    */
-    else {
-
     }
 
     return node;
 };
 
 inline AST* thirdPass(AST* node) {
+    /*
+    Semantic checks:
+    4. The number/type of arguments in a function call doesn't match the function's declaration.
+    5. The main function can't be called.
+    7. Type mismatch for an operator (||, &&, ==, !=, =, <, >, <=, >=, +, - (unary and binary), *, /, %, !).
+    11. A value returned from a function has the wrong type.
+    12. An if- or while-condition must be of Boolean type.
+    */
+
+    // Semantic checks 4 and 5
+    if (before && (node->getNodeType() == "funccall")) {
+        entry funcDecl;
+        int size = scopeStack.size();
+        bool exists = false;
+        for (int i = 0; i < size; i++) {
+            auto it = scopeStack.at(i)->find(node->getName());
+            if (it != scopeStack.at(i)->end()) {
+                funcDecl = scopeStack.at(i)->at(node->getName());
+                exists = true;
+            }
+        }
+        if (!exists) {
+
+        }
+        //Semantic check 5
+        else if (funcDecl.nodeType == "maindecl") {
+            cerr << "Error: Main function called near line: " << node->getLineNo() << "." << endl;
+            errors++;
+        }
+        //Semantic check 4
+        else {
+            unordered_map<string, entry> * funcTable = funcDecl.symTable;
+            for (int parNum = 1; parNum <= node->getChildren().size(); parNum++) {
+                string nodeType = node->getChildren().at(parNum-1)->getNodeType();
+                string type;
+                if (nodeType == "string") {
+                    type = "string";
+                }
+                else {
+                    type = getIdType(node->getChildren().at(parNum-1)->getName());
+                }
+                for (auto& it : *funcTable) {
+                    if (it.second.paramNum == parNum) {
+                        if (!(type == it.second.type)) {
+                            cerr << "Error: Wrong type used in function call near line: " << node->getLineNo() << ". ";
+                            cerr << type << " used instead of " << it.second.type << "." << endl;
+                            errors++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Update scope stack for the current function declaration
+    else if (node->getNodeType() == "maindecl" || node->getNodeType() == "funcdecl") {
+        if (before) {
+            unordered_map<string, entry>* ptr = scopeStack.at(1)->at(node->getName()).symTable;
+            scopeStack.push_back(ptr);
+            scope++;
+        }
+        else {
+            scope--;
+            scopeStack.pop_back();
+        }
+    }
+    
     return node;
 };
 
@@ -254,42 +308,47 @@ inline AST* fourthPass(AST* node) {
 inline void addPreDefined() {
     // Entry for getChar function
     entry getChar = {.scope = 0, .type = "int"};
-    symTables.at(0).insert({"getchar", getChar});
+    symTables[0].insert({"getchar", getChar});
 
     // Entry for halt function
     entry halt = {.scope = 0, .type = "void"};
-    symTables.at(0).insert({"halt", halt});
+    symTables[0].insert({"halt", halt});
 
     // Entry for printb function
     unordered_map<string, entry> printbTable;
-    entry printbParam = {.scope = 1, .type = "boolean"};
+    entry printbParam = {.scope = 1, .paramNum = 1, .type = "boolean"};
     printbTable.insert({"b", printbParam});
-    symTables.push_back(printbTable);
-    entry printb = {.scope = 0, .type = "void", .attr = &symTables.back()};
-    symTables.at(0).insert({"printb", printb});
+    symTables[symIt] = printbTable;
+    entry printb = {.scope = 0, .type = "void", .symTable = &symTables[symIt]};
+    symTables[0].insert({"printb", printb});
+    symIt++;
 
     // Entry for printc function
     unordered_map<string, entry> printcTable;
-    entry printcParam = {.scope = 1, .type = "int"};
+    entry printcParam = {.scope = 1, .paramNum = 1, .type = "int"};
     printcTable.insert({"c", printcParam});
-    symTables.push_back(printcTable);
-    entry printc = {.scope = 0, .type = "void", .attr = &printcTable };
-    symTables.at(0).insert({"printc", printc});
+    symTables[symIt] = printcTable;
+    entry printc = {.scope = 0, .type = "void", .symTable = &symTables[symIt]};
+    symTables[0].insert({"printc", printc});
+    symIt++;
 
     // Entry for printi function
     unordered_map<string, entry> printiTable;
-    entry printiParam = {.scope = 1, .type = "int"};
+    entry printiParam = {.scope = 1, .paramNum = 1, .type = "int"};
     printiTable.insert({"i", printcParam});
-    symTables.push_back(printiTable);
-    entry printi = {.scope = 0, .type = "void", .attr = &printiTable };
-    symTables.at(0).insert({"printi", printi});
+    symTables[symIt] = printiTable;
+    entry printi = {.scope = 0, .type = "void", .symTable = &symTables[symIt] };
+    symTables[0].insert({"printi", printi});
+    symIt++;
+
     // Entry for prints function
     unordered_map<string, entry> printsTable;
-    entry printsParam = {.scope = 1, .type = "string"};
+    entry printsParam = {.scope = 1, .paramNum = 1, .type = "string"};
     printsTable.insert({"s", printsParam});
-    symTables.push_back(printsTable);
-    entry prints = {.scope = 0, .type = "void", .attr = &printsTable };
-    symTables.at(0).insert({"prints", prints});
+    symTables[symIt] = printsTable;
+    entry prints = {.scope = 0, .type = "void", .symTable = &symTables[symIt] };
+    symTables[0].insert({"prints", prints});
+    symIt++;
 };
 
 inline void checkForMain(unordered_map<string, entry> global) {
@@ -309,3 +368,19 @@ inline void checkForMain(unordered_map<string, entry> global) {
         errors++;
     }
 }
+
+inline string getIdType(string name) {
+    int size = scopeStack.size() - 1;
+    for (int i = size; i >= 0; i--) {
+        auto it = scopeStack.at(i)->find(name);
+        if (it != scopeStack.at(i)->end()) {
+            return it->second.type;
+        }    
+    }
+    return "";
+}
+/*
+inline bool typeCheck() {
+
+}
+*/

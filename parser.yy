@@ -89,18 +89,18 @@
 %token <strVal> ID "id"
 %token <ival> NUM "number"
 
-%type <prog> program
-%type <maindecl> mainfunctiondeclaration
-%type <maindecl> mainfunctiondeclarator
-%type <strVal> identifier
+%type <ast> program
+%type <ast> mainfunctiondeclaration
+%type <ast> mainfunctiondeclarator
+%type <ast> identifier
 %type <ast> globaldeclaration
 %type <ast> globaldeclarations
-%type <vardecl> variabledeclaration
-%type <funcdecl> functiondeclarator
-%type <funcdecl> functiondeclaration
-%type <funcdecl> functionheader
+%type <ast> variabledeclaration
+%type <ast> functiondeclarator
+%type <ast> functiondeclaration
+%type <ast> functionheader
 %type <enumVal> type
-%type <param> formalparameter
+%type <ast> formalparameter
 %type <ast> formalparameterlist
 %type <ast> block
 %type <ast> blockstatement
@@ -169,10 +169,10 @@ globaldeclaration       : variabledeclaration
                         | mainfunctiondeclaration 
                         ;
 
-variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl(@$.begin.line, $1, $2->c_str()); }
+variabledeclaration     : type identifier SEMICOLON {$$ = new VarDecl(@$.begin.line, $1, $2->getName().c_str()); $$->AddNode($2);}
                         ;
 
-identifier              : ID 
+identifier              : ID {$$ = new Id(@$.begin.line, $1->c_str());}
                         ;
 
 functiondeclaration     : functionheader block {$$ = $1; $$->AddNode($2);}
@@ -182,29 +182,31 @@ functionheader          : type functiondeclarator {$$ = $2; $$->setType($1);}
                         | VOID functiondeclarator {$$ = $2; $$->setType(Reserved::VOID);}
                         ;
 
-functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl(@$.begin.line, $1->c_str());
+functiondeclarator      : identifier OPENPAR formalparameterlist CLOSEPAR {$$ = new FuncDecl(@$.begin.line, $1->getName().c_str());
                                                                             $$->AddNode($3);
+                                                                            $$->addParam();
                                                                             if ($3->hasNext()){
                                                                                 AST* tmp = $3;
                                                                                 while (tmp->hasNext()){
                                                                                     tmp = tmp->getNext();
                                                                                     $$->AddNode(tmp);
+                                                                                    $$->addParam();
                                                                                 }
-                                                                            } }
-                        | identifier OPENPAR CLOSEPAR {$$ = new FuncDecl(@$.begin.line, $1->c_str());}
+                                                                            }}
+                        | identifier OPENPAR CLOSEPAR {$$ = new FuncDecl(@$.begin.line, $1->getName().c_str());} 
                         ;
 
-formalparameterlist     : formalparameter
-                        | formalparameterlist COMMA formalparameter {$$ = $3; $$->setNext($1);}
+formalparameterlist     : formalparameter 
+                        | formalparameterlist COMMA formalparameter {$3->setNext($1); $$ = $3;}
                         ;
 
-formalparameter         : type identifier {$$ = new Param(@$.begin.line, $1, $2->c_str());}
+formalparameter         : type identifier {$$ = new Param(@$.begin.line, $1, $2->getName().c_str());}
                         ;
 
 mainfunctiondeclaration : mainfunctiondeclarator block {$$ = $1; $$->AddNode($2);}
                         ;
 
-mainfunctiondeclarator  : identifier OPENPAR CLOSEPAR    {$$ = new MainDecl(@$.begin.line, $1->c_str()); }
+mainfunctiondeclarator  : identifier OPENPAR CLOSEPAR    {$$ = new MainDecl(@$.begin.line, $1->getName().c_str());}
                         ;
 
 block                   : OPENBRACE blockstatements CLOSEBRACE {$$ = new Block(@$.begin.line);
@@ -248,10 +250,10 @@ primary                 : literal
                         ;
 
 argumentlist            : expression
-                        | argumentlist COMMA expression {$$ = $3; $$->setNext($1);}
+                        | argumentlist COMMA expression {$3->setNext($1); $$ = $3;}
                         ;
 
-functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR {$$ = new FuncCall(@$.begin.line, $1->c_str()); 
+functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR {$$ = new FuncCall(@$.begin.line, $1->getName().c_str());
                                                                     $$->AddNode($3);
                                                                     if ($3->hasNext()){
                                                                         AST* tmp = $3;
@@ -260,11 +262,11 @@ functioninvocation      : identifier OPENPAR argumentlist CLOSEPAR {$$ = new Fun
                                                                             $$->AddNode(tmp);
                                                                         }
                                                                     }}
-                        | identifier OPENPAR CLOSEPAR   {$$ = new FuncCall(@$.begin.line, $1->c_str());}
+                        | identifier OPENPAR CLOSEPAR   {$$ = new FuncCall(@$.begin.line, $1->getName().c_str());}
                         ;
 
 postfixexpression       : primary 
-                        | identifier {$$ = new Id(@$.begin.line, $1->c_str());}
+                        | identifier {$$ = new Id(@$.begin.line, $1->getName().c_str());}
                         ;
 
 unaryexpression         : SUB unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::SUB, $2);}
@@ -307,7 +309,7 @@ assignmentexpression    : conditionalorexpression
                         | assignment
                         ;
 
-assignment              : identifier ASSIGN assignmentexpression {$$ = new AssnStmt(@$.begin.line, $1->c_str()); $$->AddNode($3); }
+assignment              : identifier ASSIGN assignmentexpression {$$ = new AssnStmt(@$.begin.line, $1->getName().c_str()); $$->AddNode($1); $$->AddNode($3);}
                         ;
 
 expression              : assignmentexpression

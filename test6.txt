@@ -1,0 +1,11 @@
+int a;
+main() {
+    int b;
+
+    func2(b, b);
+    prints(b);
+}
+
+void func2(int hello, boolean c) {
+
+}

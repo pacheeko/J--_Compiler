@@ -150,6 +150,12 @@ class AST
         }
     }
 
+    virtual int getParamNum() {return 0;}
+
+    virtual void addParam() {}
+
+    virtual void setParamNum(int p) {}
+
     AST() = default;
 
     virtual ~AST()
@@ -659,11 +665,16 @@ class FuncDecl : public AST
     std::string name;
     std::string nodeType = "funcdecl";
     u_int8_t type;
-    int lineno;
+    int lineno, numOfParams = 0;
 
     void AddChild(AST *child) override
-    {
-        children.push_back(child);
+    {   
+        if (child->getNodeType() == "param" || child->getNodeType() == "id") {
+            children.insert(children.begin(), child);
+        }
+        else {
+            children.push_back(child);
+        }
 
     }
 
@@ -682,6 +693,10 @@ class FuncDecl : public AST
         return name;
     }
 
+    void addParam() override {
+        numOfParams++;
+    }
+
     std::string getType() override {
         return getReserved(type);
     }
@@ -690,10 +705,16 @@ class FuncDecl : public AST
         AddChild(node);
     }
 
+    void setType(u_int8_t t) override {
+        type = t;
+    }
+
     void reverseChildren() override {
-        std::reverse(children.begin(), children.end());
-        for (auto child : children) {   
-            child->reverseChildren();
+        for (int i = 0; i < children.size(); i++) {
+            if (i < numOfParams) {
+                children.at(i)->setParamNum(i+1);
+            }  
+            children.at(i)->reverseChildren();
         }
     }
 
@@ -715,12 +736,12 @@ class Param : public AST
     std::string name;
     std::string nodeType = "param";
     u_int8_t type;
-    int lineno;
+    int lineno, paramNum;
     AST* next;
 
     void AddChild(AST *child) override
     {
-        children.push_back(child);
+        children.insert(children.begin(), child);
 
     }
 
@@ -744,12 +765,33 @@ class Param : public AST
         AddChild(node);
     }
 
-    void setNext(AST * n) override {
-        next = n;
+    AST * getNext() override {
+        return next;
     }
 
-    AST* GetNext() {
-        return next;
+    bool hasNext() override {
+        if (next != NULL) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    void setNext(AST* ast) override {
+        next = ast;
+    }
+
+    int getParamNum() override{
+        return paramNum;
+    }
+
+    std::string getType() override {
+        return getReserved(type);
+    }
+
+    void setParamNum(int p) override {
+        paramNum = p;
     }
 
     void Print() override {
@@ -889,7 +931,7 @@ class Id : public AST {
 
     void AddChild(AST *child) override
     {
-        children.push_back(child);
+        children.insert(children.begin(), child);
 
     }
 
@@ -902,23 +944,34 @@ class Id : public AST {
         return nodeType;
     }
 
-    int getLineNo() override {
-        return lineno;
+    std::string getName() override {
+        return id;
     }
 
-    void setNext(AST *node) override {
-        next = node;
+    int getLineNo() override {
+        return lineno;
     }
 
     AST * getNext() override {
         return next;
     }
 
+    bool hasNext() override {
+        if (next != NULL) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    void setNext(AST* ast) override {
+        next = ast;
+    }
+
     void AddNode(AST *node) override {
         AddChild(node);
     }
-
-
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
@@ -1100,11 +1153,14 @@ class FuncCall : public AST {
         AddChild(node);
     }
 
+    std::string getName() override {
+        return id;
+    }
+
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Function Invocation {'name': " << id << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
         INDENTS++;
-        std::cout << std::string(INDENTS*2, INDENT_CHAR) << "Arguments:\n";
         for (int i = children.size(); i --> 0;)
         {
             children[i]->Print();
