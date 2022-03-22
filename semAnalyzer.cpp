@@ -365,14 +365,10 @@ inline AST* thirdPass(AST* node) {
             }
         }
     }
-    else if (before && ((node->getNodeType() == "compare") ||
-                        (node->getNodeType() == "logical") ||
-                        (node->getNodeType() == "arithmetic"))) {
-        typeCheck(node);
-    }
+
     else if (before && (node->getNodeType() == "assnstmt")) {
         string varType = getIdType(node->getName());
-        string assnType = typeCheck(node->getChildren().at(0));
+        string assnType = typeCheck(node->getChildren().at(1));
         if (varType != assnType) {
                 cerr << "Error: Variable type " << varType << " does not match assignment type " << assnType << " near line: " << node->getLineNo() << ". " << endl;
                 errors++;            
@@ -399,7 +395,6 @@ inline AST* fourthPass(AST* node) {
             whileLoops --;
         }
     }
-
 
     return node;
 };
@@ -514,6 +509,12 @@ inline string typeCheck(AST* node) {
             if (right != "int") {
                 cerr << "Error: Bad type used in compare operation near line: " << node->getLineNo() << ". " << "Type " << right << " used instead of int." << endl;
                 errors++;    
+            }
+        }
+        else {
+            if (left != right) {
+                cerr << "Error: Trying to compare type " << left << " to type " << right << " near line " << node->getLineNo() << "." << endl;
+                errors++; 
             }
         }
         return "boolean";
