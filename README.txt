@@ -1,7 +1,7 @@
 Braydon Pacheco (30100449)
 CPSC 411 Project
 
-Parser for j-- language.
+Compiler for j-- language.
 
 Compile instructions:
 
@@ -10,9 +10,9 @@ many additional files at compile time.
 
 Run instructions:
 
-Type './parser testfile' to run the parser, with testfile being the directory of the file you 
-would like to parse. The file 'parse.t23' has been included for testing purposes. Execute the 
-command './parser parse.t23' with the parse.t23 file in the same directory as the parser to 
-parse through this test example.
+Type './main testfile' to run the parser, with testfile being the directory of the file you 
+would like to parse. Several test files have been included. For example, execute the 
+command './main test1.txt' with the test1.txt file in the same directory as the compiler to 
+do semantic checking on this test example.
 
-** The parser has been compiled and tested on the CPSC linux machines. **
+** The compiler has been compiled and tested on the CPSC linux machines. **
