@@ -1,0 +1,26 @@
+int a;
+boolean b;
+int c;
+boolean d;
+main() {
+    b = a + 5;
+    b = a + true;
+
+    b = a - 4;
+    b = a - true;
+
+    b = a * 82;
+    b = false * a;
+
+    b = 17 / a;
+    b = a / false;
+
+    c = -a;
+    c = -false;
+
+    b = !true;
+    b = !a;
+
+    c = a % 2;
+    c = true % a;
+     }

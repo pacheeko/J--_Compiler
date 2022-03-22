@@ -269,40 +269,40 @@ postfixexpression       : primary
                         | identifier {$$ = new Id(@$.begin.line, $1->getName().c_str());}
                         ;
 
-unaryexpression         : SUB unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::SUB, $2);}
-                        | NOT unaryexpression {$$ = new Logical(@$.begin.line, Oper::NOT, $2);}  
+unaryexpression         : SUB unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::SUB); $$->AddNode($2);}
+                        | NOT unaryexpression {$$ = new Logical(@$.begin.line, Oper::NOT); $$->AddNode($2);}  
                         | postfixexpression {}
                         ;
 
 multiplicativeexpression: unaryexpression
-                        | multiplicativeexpression MULT unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::MULT, $1, $3) ;}
-                        | multiplicativeexpression DIV unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::DIV, $1, $3) ;}
-                        | multiplicativeexpression MOD unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::MOD, $1, $3) ;}
+                        | multiplicativeexpression MULT unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::MULT); $$->AddNode($1); $$->AddNode($3);}
+                        | multiplicativeexpression DIV unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::DIV); $$->AddNode($1); $$->AddNode($3);}
+                        | multiplicativeexpression MOD unaryexpression {$$ = new Arithmetic(@$.begin.line, Oper::MOD); $$->AddNode($1); $$->AddNode($3);}
                         ;
 
 additiveexpression      : multiplicativeexpression
-                        | additiveexpression ADD multiplicativeexpression {$$ = new Arithmetic(@$.begin.line, Oper::ADD, $1, $3) ;}
-                        | additiveexpression SUB multiplicativeexpression {$$ = new Arithmetic(@$.begin.line, Oper::SUB, $1, $3) ;}
+                        | additiveexpression ADD multiplicativeexpression {$$ = new Arithmetic(@$.begin.line, Oper::ADD); $$->AddNode($1); $$->AddNode($3);}
+                        | additiveexpression SUB multiplicativeexpression {$$ = new Arithmetic(@$.begin.line, Oper::SUB); $$->AddNode($1); $$->AddNode($3);}
                         ;
 
 relationalexpression    : additiveexpression
-                        | relationalexpression GT additiveexpression {$$ = new Compare(@$.begin.line, Oper::GT, $1, $3);}
-                        | relationalexpression LT additiveexpression {$$ = new Compare(@$.begin.line, Oper::LT, $1, $3);}
-                        | relationalexpression LE additiveexpression {$$ = new Compare(@$.begin.line, Oper::LE, $1, $3);}
-                        | relationalexpression GE additiveexpression {$$ = new Compare(@$.begin.line, Oper::GE, $1, $3);}
+                        | relationalexpression GT additiveexpression {$$ = new Compare(@$.begin.line, Oper::GT); $$->AddNode($1); $$->AddNode($3);}
+                        | relationalexpression LT additiveexpression {$$ = new Compare(@$.begin.line, Oper::LT); $$->AddNode($1); $$->AddNode($3);}
+                        | relationalexpression LE additiveexpression {$$ = new Compare(@$.begin.line, Oper::LE); $$->AddNode($1); $$->AddNode($3);}
+                        | relationalexpression GE additiveexpression {$$ = new Compare(@$.begin.line, Oper::GE); $$->AddNode($1); $$->AddNode($3);}
                         ;
 
 equalityexpression      : relationalexpression
-                        | equalityexpression EQ relationalexpression {$$ = new Compare(@$.begin.line, Oper::EQ, $1, $3);}
-                        | equalityexpression NEQ relationalexpression {$$ = new Compare(@$.begin.line, Oper::NEQ, $1, $3);}
+                        | equalityexpression EQ relationalexpression {$$ = new Compare(@$.begin.line, Oper::EQ); $$->AddNode($1); $$->AddNode($3);}
+                        | equalityexpression NEQ relationalexpression {$$ = new Compare(@$.begin.line, Oper::NEQ); $$->AddNode($1); $$->AddNode($3);}
                         ;
 
 conditionalandexpression: equalityexpression
-                        | conditionalandexpression AND equalityexpression {$$ = new Logical(@$.begin.line, Oper::AND, $1, $3);}
+                        | conditionalandexpression AND equalityexpression {$$ = new Logical(@$.begin.line, Oper::AND); $$->AddNode($1); $$->AddNode($3);}
                         ;
 
 conditionalorexpression : conditionalandexpression
-                        | conditionalorexpression OR conditionalandexpression {$$ = new Logical(@$.begin.line, Oper::OR, $1, $3);}
+                        | conditionalorexpression OR conditionalandexpression {$$ = new Logical(@$.begin.line, Oper::OR); $$->AddNode($1); $$->AddNode($3);}
                         ;
 
 assignmentexpression    : conditionalorexpression 

@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     root = semanticAnalyzer(root);
     if (errors > 0) {
         std::cerr << errors << " error(s) found. Exiting." << std::endl;
-        //exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
     std::cout << "Parse Complete! Printing AST..." << std::endl;
     root->Print();  //Prints out the entire abstract syntax tree

@@ -20,8 +20,6 @@ messages as they occur. Checks for errors based on the following semantic inform
 
 */
 
-// TODO: 4 different pass functions, AST traverser 
-
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
@@ -61,6 +59,8 @@ inline AST* fourthPass(AST* node);
 inline void addPreDefined();
 inline void checkForMain(unordered_map<string, entry> global);
 inline string getIdType(string name);
+inline string typeCheck(AST* node);
+inline bool checkForReturn(AST* node, string returnType);
 
 inline AST* semanticAnalyzer(AST* root) {
     unordered_map<string, entry> preDefined;
@@ -87,6 +87,7 @@ inline AST* semanticAnalyzer(AST* root) {
     return root;
 }
 
+// Calls the given function only after calling it on all of the nodes children
 inline AST* postOrderTrav(AST* root, AST* (*func)(AST *)) {
     bool scopeChange = false;
     if ((root->getNodeType() == "maindecl") || (root->getNodeType() == "funcDecl")) {
@@ -103,6 +104,7 @@ inline AST* postOrderTrav(AST* root, AST* (*func)(AST *)) {
     return root;
 };
 
+// Calls the given function only before calling it on all of the nodes children
 inline AST* preOrderTrav(AST* root, AST* (*func)(AST *)) {
     func(root);
     bool scopeChange = false;
@@ -119,6 +121,7 @@ inline AST* preOrderTrav(AST* root, AST* (*func)(AST *)) {
     return root;
 };
 
+// Calls the given function before and after calling it on all of the nodes children
 inline AST* prePostTrav(AST* root, AST* (*func)(AST *)) {
     before = true;
     func(root);
@@ -183,6 +186,8 @@ inline AST* secondPass(AST* node) {
                     cerr << "Error: Variable redeclaration in same scope around line: " << node->getLineNo() << "." << endl;
                     errors++;
             }
+            auto loc = scopeStack.at(scope)->at(node->getName());
+            node->setLoc(&loc);
         }
     }
     // Update scope stack for the current function declaration
@@ -226,6 +231,8 @@ inline AST* secondPass(AST* node) {
             cerr << "Error: Param reused in same function near line: " << node->getLineNo() << "." << endl;
             errors++;
         }
+        auto loc = scopeStack.at(scope)->at(node->getName());
+        node->setLoc(&loc);
     }
 
     return node;
@@ -321,42 +328,9 @@ inline AST* thirdPass(AST* node) {
             for (auto child : node->getChildren()) {
                 if (child->getNodeType() == "block") {
                     for (auto blockChild : child->getChildren()) {
-                        if (blockChild->getNodeType() == "return") {
-                            retStmt = true;
-                            if (blockChild->getChildren().empty()) {
-                                //10. A non-void function must return a value.
-                                if (returnType == "int" || returnType == "boolean") {
-                                    cerr << "Error: Non-void function of type " << returnType << " does not return a value near line: " << node->getLineNo() << ". " << endl;
-                                    errors++;
-                                }
-                            }
-                            else {
-                                string retValue = blockChild->getChildren().at(0)->getType();
-                                if (retValue == "") {
-                                    retValue = getIdType(blockChild->getChildren().at(0)->getName());
-                                    if (retValue == "") {
-                                        cerr << "Error: Function returns undeclared variable " << blockChild->getChildren().at(0)->getName() << " near line: " << node->getLineNo() << ". " << endl;
-                                        errors++;
-                                    }
-                                }
-
-                                //9. A void function can't return a value.
-                                if (returnType == "void") {
-                                    cerr << "Error: Void function returns non-void type " << retValue << " near line: " << node->getLineNo() << ". " << endl;
-                                    errors++;
-                                }
-                                //9. A void function can't return a value.
-                                else if (returnType == "") {
-                                    cerr << "Error: Main function returns non-void type " << retValue << " near line: " << node->getLineNo() << ". " << endl;
-                                    errors++;
-                                }
-                                //11. A value returned from a function has the wrong type.
-                                else {
-                                    if (!(returnType == retValue)) {
-                                    cerr << "Error: Non-void function returns type " << retValue << " when it should return type " << returnType << " near line: " << node->getLineNo() << ". " << endl;
-                                    errors++;
-                                    }
-                                }
+                        if (retStmt == false) {
+                            if (checkForReturn(blockChild, returnType)) {
+                                retStmt = true;
                             }
                         }
                     }
@@ -376,7 +350,34 @@ inline AST* thirdPass(AST* node) {
             scopeStack.pop_back();
         }
     }
-    
+    //12. An if- or while-condition must be of Boolean type.
+    else if (before && (node->getNodeType() == "if" || node->getNodeType() == "while")) {
+        AST* child = node->getChildren().at(0);
+        string type = typeCheck(child);
+        if (type != "boolean") {
+            if (node->getNodeType() == "if") {
+                cerr << "Error: If condition statement not of boolean type near line: " << node->getLineNo() << ". " << endl;
+                errors++;
+            }
+            else {
+                cerr << "Error: While condition statement not of boolean type near line: " << node->getLineNo() << ". " << endl;
+                errors++;
+            }
+        }
+    }
+    else if (before && ((node->getNodeType() == "compare") ||
+                        (node->getNodeType() == "logical") ||
+                        (node->getNodeType() == "arithmetic"))) {
+        typeCheck(node);
+    }
+    else if (before && (node->getNodeType() == "assnstmt")) {
+        string varType = getIdType(node->getName());
+        string assnType = typeCheck(node->getChildren().at(0));
+        if (varType != assnType) {
+                cerr << "Error: Variable type " << varType << " does not match assignment type " << assnType << " near line: " << node->getLineNo() << ". " << endl;
+                errors++;            
+        }
+    }
     return node;
 };
 
@@ -403,6 +404,8 @@ inline AST* fourthPass(AST* node) {
     return node;
 };
 
+// Adds the j-- library functions to the symbol table at scope stack 0 so
+// that these functions are always in scope
 inline void addPreDefined() {
     // Entry for getChar function
     entry getChar = {.scope = 0, .type = "int"};
@@ -449,6 +452,7 @@ inline void addPreDefined() {
     symIt++;
 };
 
+// Checks the global scopeStack for main functions
 inline void checkForMain(unordered_map<string, entry> global) {
     int mains = 0;
 
@@ -467,6 +471,8 @@ inline void checkForMain(unordered_map<string, entry> global) {
     }
 }
 
+// Takes as input the name of an identifier, searches for it in the 
+// scope stack, and returns its type as a string
 inline string getIdType(string name) {
     int size = scopeStack.size() - 1;
     for (int i = size; i >= 0; i--) {
@@ -477,8 +483,121 @@ inline string getIdType(string name) {
     }
     return "";
 }
-/*
-inline bool typeCheck() {
 
+//Returns the type of given node, and recursively checks the left and right side
+//of operations and returns error messages if their types are wrong.
+inline string typeCheck(AST* node) {
+    string nodeType = node->getNodeType();
+    if (nodeType == "literal") {
+        return "boolean";
+    }
+    else if (nodeType == "string") {
+        return "string";
+    }
+    else if (nodeType == "num") {
+        return "int";
+    }
+    else if (nodeType == "id") {
+        return getIdType(node->getName());
+    }
+    else if (nodeType == "funccall") {
+        return node->getType();
+    }
+    else if (nodeType == "compare") {
+        string left = typeCheck(node->getChildren().at(0));
+        string right = typeCheck(node->getChildren().at(1));
+        if (!(node->getType() == "==") && !(node->getType() == "!=")) {
+            if (left != "int") {
+                cerr << "Error: Bad type used in compare operation near line: " << node->getLineNo() << ". " << "Type " << left << " used instead of int." << endl;
+                errors++;            
+            }
+            if (right != "int") {
+                cerr << "Error: Bad type used in compare operation near line: " << node->getLineNo() << ". " << "Type " << right << " used instead of int." << endl;
+                errors++;    
+            }
+        }
+        return "boolean";
+    }
+    else if (nodeType == "logical") {
+        string left = typeCheck(node->getChildren().at(0));
+        if (left != "boolean") {
+            cerr << "Error: Bad type used in logical operation near line: " << node->getLineNo() << ". " << "Type " << left << " used instead of boolean." << endl;
+            errors++;            
+        }
+        if (node->getChildren().size() > 1) {
+            string right = typeCheck(node->getChildren().at(1));
+            if (right != "boolean") {
+                cerr << "Error: Bad type used in logical operation near line: " << node->getLineNo() << ". " << "Type " << right << " used instead of boolean." << endl;
+                errors++;    
+            }
+        }
+        return "boolean";
+    }
+    else if (nodeType == "arithmetic") {
+        string left = typeCheck(node->getChildren().at(0));
+        if (left != "int") {
+            cerr << "Error: Bad type used in arithmetic operation near line: " << node->getLineNo() << ". " << "Type " << left << " used instead of int." << endl;
+            errors++;            
+        }
+        if (node->getChildren().size() > 1) {        
+            string right = typeCheck(node->getChildren().at(1));
+            if (right != "int") {
+                cerr << "Error: Bad type used in arithmetic operation near line: " << node->getLineNo() << ". " << "Type " << right << " used instead of int." << endl;
+                errors++;    
+            }
+        }
+        return "int";
+    }
+    return "";
 }
-*/
+
+// Recursively checks for return statements inside a function, returns
+// true if it finds a return statement.
+inline bool checkForReturn(AST* node, string returnType) {
+    bool retStmt = true;
+    if (node->getNodeType() == "return") {
+        if (node->getChildren().empty()) {
+            //10. A non-void function must return a value.
+            if (returnType == "int" || returnType == "boolean") {
+                cerr << "Error: Non-void function of type " << returnType << " does not return a value near line: " << node->getLineNo() << ". " << endl;
+                errors++;
+            }
+        }
+        else {
+            string retValue = node->getChildren().at(0)->getType();
+            if (retValue == "") {
+                retValue = getIdType(node->getChildren().at(0)->getName());
+                if (retValue == "") {
+                    cerr << "Error: Function returns undeclared variable " << node->getChildren().at(0)->getName() << " near line: " << node->getLineNo() << ". " << endl;
+                    errors++;
+                }
+            }
+
+            //9. A void function can't return a value.
+            if (returnType == "void") {
+                cerr << "Error: Void function returns non-void type " << retValue << " near line: " << node->getLineNo() << ". " << endl;
+                errors++;
+            }
+            //9. A void function can't return a value.
+            else if (returnType == "") {
+                cerr << "Error: Main function returns non-void type " << retValue << " near line: " << node->getLineNo() << ". " << endl;
+                errors++;
+            }
+            //11. A value returned from a function has the wrong type.
+            else {
+                if (!(returnType == retValue)) {
+                cerr << "Error: Non-void function returns type " << retValue << " when it should return type " << returnType << " near line: " << node->getLineNo() << ". " << endl;
+                errors++;
+                }
+            }
+        }
+    }
+    bool rt;
+    for (auto child : node->getChildren()) {
+        rt = checkForReturn(child, returnType);
+        if (retStmt == false) {
+            retStmt = rt;
+        }
+    }
+    return retStmt;
+}

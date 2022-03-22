@@ -242,7 +242,7 @@ class IfStmt : public AST {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--If Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--If Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -283,7 +283,7 @@ class ElseStmt : public AST {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Else Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--Else Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (int i = children.size(); i --> 0;)
         {
@@ -326,7 +326,7 @@ class WhileStmt : public AST {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--While Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--While Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child :children)
         {
@@ -374,7 +374,7 @@ class Block : public AST {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Block: {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--Block: {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -413,6 +413,10 @@ class AssnStmt : public AST {
     void AddNode(AST *node) override
     {
         AddChild(node);
+    }
+
+    std::string getName() override {
+        return identifier;
     }
 
     void Print() override
@@ -459,7 +463,7 @@ class NullStmt : public AST {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Null Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--Null Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -500,7 +504,7 @@ class BreakStmt : public AST {
     void Print() override
     {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Break Statement {'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--Break Statement {'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -839,7 +843,7 @@ class Num : public AST {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Num {'value': " << value << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--Num {'value': " << value << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -889,7 +893,7 @@ class Literal : public AST {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Literal {'value': " << getReserved(value)  << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--Literal {'value': " << getReserved(value)  << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -928,7 +932,7 @@ class String : public AST {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--String Literal {'value': " << value << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--String Literal {'value': " << value << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -989,7 +993,7 @@ class Id : public AST {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Id {'name': " << id << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--Id {'name': " << id << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {
@@ -1011,11 +1015,8 @@ class Compare : public AST {
 
     }
 
-    AST * before;
-    AST * after;
-
   public:
-    Compare(int line, u_int8_t t, AST* b, AST* a) : lineno(line), type(t), before(b), after(a) {}
+    Compare(int line, u_int8_t t) : lineno(line), type(t) {}
 
     std::string getNodeType() override {
         return nodeType;
@@ -1030,12 +1031,14 @@ class Compare : public AST {
         AddChild(node);
     }
 
+    std::string getType() override {
+        return getOper(type);
+    }
+
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Comparison operator {'type': " << getOper(type) << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << " }" << "\n";
+        std::cout << "--Comparison operator {'type': " << getOper(type) << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
-        before->Print();
-        after->Print();
         for (auto child : children)
         {
             child->Print();
@@ -1056,12 +1059,8 @@ class Arithmetic : public AST {
 
     }
 
-    AST * before;
-    AST * after;
-
   public:
-    Arithmetic(int line, u_int8_t t, AST* a) : lineno(line), type(t), after(a) {}
-    Arithmetic(int line, u_int8_t t, AST* b, AST*a) : lineno(line), type(t), before(b), after(a) {}
+    Arithmetic(int line, u_int8_t t) : lineno(line), type(t) {}
 
     std::string getNodeType() override {
         return nodeType;
@@ -1078,12 +1077,8 @@ class Arithmetic : public AST {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Arithmetic operator {'type': " << getOper(type) << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << " }" << "\n";
+        std::cout << "--Arithmetic operator {'type': " << getOper(type) << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
-        if (before != NULL) {
-            before->Print();
-        }
-        after->Print();
         for (auto child : children)
         {
             child->Print();
@@ -1104,12 +1099,8 @@ class Logical : public AST {
 
     }
 
-    AST * before;
-    AST * after;
-
   public:
-    Logical(int line, u_int8_t t, AST* a) : lineno(line), type(t), after(a) {}
-    Logical(int line, u_int8_t t, AST* b, AST*a) : lineno(line), type(t), before(b), after(a) {}
+    Logical(int line, u_int8_t t) : lineno(line), type(t) {}
 
     std::string getNodeType() override {
         return nodeType;
@@ -1126,12 +1117,8 @@ class Logical : public AST {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Logical operator {'type': " << getOper(type) << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << " }" << "\n";
+        std::cout << "--Logical operator {'type': " << getOper(type) << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
-        if (before != NULL) {
-            before->Print();
-        }
-        after->Print();
         for (auto child : children)
         {
             child->Print();
@@ -1180,7 +1167,7 @@ class FuncCall : public AST {
 
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
-        std::cout << "--Function Invocation {'name': " << id << ", 'lineno': " << lineno << ", 'memLoc': " << memoryLoc << "}" << "\n";
+        std::cout << "--Function Invocation {'name': " << id << ", 'lineno': " << lineno << "}" << "\n";
         INDENTS++;
         for (auto child : children)
         {

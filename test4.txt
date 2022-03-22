@@ -1,9 +1,0 @@
-int a;
-
-main() {
-
-}
-
-int notmain() {
-    return 5;
-}

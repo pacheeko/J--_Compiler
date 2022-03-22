@@ -1,0 +1,10 @@
+int a;
+boolean b;
+int c;
+boolean d;
+main() {
+    a = 5;
+    b = true;
+    d = b || false;
+    d = true || a;
+     }
