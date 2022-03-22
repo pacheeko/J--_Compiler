@@ -492,7 +492,7 @@ inline string typeCheck(AST* node) {
     else if (nodeType == "num") {
         return "int";
     }
-    else if (nodeType == "id") {
+    else if ((nodeType == "id") || nodeType == "funccall") {
         return getIdType(node->getName());
     }
     else if (nodeType == "funccall") {
