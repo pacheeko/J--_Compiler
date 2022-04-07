@@ -329,16 +329,14 @@ inline AST* thirdPass(AST* node) {
                 if (child->getNodeType() == "block") {
                     for (auto blockChild : child->getChildren()) {
                         if (retStmt == false) {
-                            if (checkForReturn(blockChild, returnType)) {
-                                retStmt = true;
-                            }
+                            retStmt = checkForReturn(blockChild, returnType);
                         }
                     }
                 }
             }
             if (retStmt == false) {
                 //8. No return statement in a non-void function.
-                if (returnType == "int" || returnType == "boolean") {
+                if ((returnType == "int") || (returnType == "boolean")) {
                     cerr << "Error: Non-void function of type " << returnType << " does not return a value near line: " << node->getLineNo() << ". " << endl;
                     errors++;                    
                 }
@@ -555,8 +553,9 @@ inline string typeCheck(AST* node) {
 // Recursively checks for return statements inside a function, returns
 // true if it finds a return statement.
 inline bool checkForReturn(AST* node, string returnType) {
-    bool retStmt = true;
+    bool retStmt = false;
     if (node->getNodeType() == "return") {
+        retStmt = true;
         if (node->getChildren().empty()) {
             //10. A non-void function must return a value.
             if (returnType == "int" || returnType == "boolean") {
