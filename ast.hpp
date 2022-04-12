@@ -19,7 +19,7 @@ inline std::string getOper(uint8_t oper) {
         case MULT: return "*";
         case MOD: return "%";
         case LT: return "<";
-        case GT: return "?";
+        case GT: return ">";
         case LE: return "<=";
         case GE: return ">=";
         case EQ: return "==";
@@ -129,6 +129,10 @@ class AST
     }
 
     virtual std::string getNodeType() {
+        return "";
+    }
+
+    virtual std::string getValue() {
         return "";
     }
 
@@ -841,6 +845,10 @@ class Num : public AST {
         return "int";
     }
 
+    std::string getValue() override {
+        return std::to_string(value);
+    }
+
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Num {'value': " << value << ", 'lineno': " << lineno << "}" << "\n";
@@ -891,6 +899,10 @@ class Literal : public AST {
         }
     }
 
+    std::string getValue() override {
+        return getReserved(value);
+    }
+
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Literal {'value': " << getReserved(value)  << ", 'lineno': " << lineno << "}" << "\n";
@@ -928,6 +940,10 @@ class String : public AST {
     void AddNode(AST *node) override
     {
         AddChild(node);
+    }
+
+    std::string getValue() override {
+        return value;
     }
 
     void Print() override {
@@ -1075,6 +1091,10 @@ class Arithmetic : public AST {
         AddChild(node);
     }
 
+    std::string getType() override {
+        return getOper(type);
+    }
+
     void Print() override {
         std::cout << std::string(INDENTS*2, INDENT_CHAR);
         std::cout << "--Arithmetic operator {'type': " << getOper(type) << ", 'lineno': " << lineno << "}" << "\n";
@@ -1113,6 +1133,10 @@ class Logical : public AST {
     void AddNode(AST *node) override
     {
         AddChild(node);
+    }
+
+    std::string getType() override {
+        return getOper(type);
     }
 
     void Print() override {

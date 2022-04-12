@@ -277,7 +277,7 @@ inline AST* thirdPass(AST* node) {
             int funcDeclParams = 0;
             unordered_map<string, entry> * funcTable = funcDecl.symTable;
             for (auto& it : *funcTable) {
-                if (it.second.nodeType == "param") {
+                if (it.second.paramNum != 0) {
                     funcDeclParams++;
                 }
             }
@@ -285,7 +285,6 @@ inline AST* thirdPass(AST* node) {
                 cerr << "Error: Function invocation near line " << node->getLineNo() << " uses " << funcCallParams << " argument(s) when it should use " << funcDeclParams << " argument(s)." << endl;
                 errors++;
             }
-
             for (int parNum = 1; parNum <= funcCallParams; parNum++) {
                 string nodeType = node->getChildren().at(parNum-1)->getNodeType();
                 string type;
@@ -401,11 +400,11 @@ inline AST* fourthPass(AST* node) {
 // that these functions are always in scope
 inline void addPreDefined() {
     // Entry for getChar function
-    entry getChar = {.scope = 0, .type = "int"};
+    entry getChar = {.scope = 0, .type = "int", .symTable = &symTables[29]};
     symTables[0].insert({"getchar", getChar});
 
     // Entry for halt function
-    entry halt = {.scope = 0, .type = "void"};
+    entry halt = {.scope = 0, .type = "void", .symTable = &symTables[29]};
     symTables[0].insert({"halt", halt});
 
     // Entry for printb function
