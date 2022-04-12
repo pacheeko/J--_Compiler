@@ -1,9 +1,0 @@
-int a;
-
-main() {
-    func1(b);
-}
-
-void func1(int param) {
-    return;
-}

@@ -1,8 +1,0 @@
-int a;
-boolean b;
-int c;
-boolean d;
-main() {
-    a = 5;
-    b = 5;
-     }

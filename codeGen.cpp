@@ -28,8 +28,6 @@ string loadRegister(AST* node, int resultRegister);
 
 void generateCode(AST * root) {
     string fname = string(filename);
-    auto it = fname.find(".");
-    fname = fname.substr(0,it);
     fname.append(".asm");
     ofstream file(fname);
     dataSec = "\t.globl main\n\t.data\n";
@@ -67,10 +65,25 @@ string createAssemblyCode(AST * node) {
     }
     else if (temp == "funcdecl") {
         funcSec.append(node->getName()).append(":\n");
+        int currParam = 0;
         for (AST* child : node->getChildren()) {
-            output.append(createAssemblyCode(child));
+            if (child->getNodeType() == "param") {
+                output.append("sub $sp, $sp, 4\n");
+                output.append("sw $a").append(to_string(currParam)).append(", 0($sp)\n");
+                variableStack.push_back(child->getName());
+                currParam++;
+            }
+            else {
+                output.append(createAssemblyCode(child));
+            }
 
-        }       
+        }  
+        if (currParam != 0) {     
+            output.append("add $sp, $sp, ").append(to_string(4*currParam)).append("\n");
+        }
+        for (int i = 0; i < currParam; i++) {
+            variableStack.pop_back();
+        }
         output.append("jr $ra\n");
         funcSec.append(output);  
     }
@@ -111,20 +124,24 @@ string createAssemblyCode(AST * node) {
                 funcFound = true;
                 for (auto& it2 : *it->second.symTable) {
                     if ((1 <= it2.second.paramNum) && (4 >= it2.second.paramNum)) {
-                        string value;
                         string type = node->getChildren().at(it2.second.paramNum - 1)->getNodeType();
-                        if (type == "num") {
-                            value = node->getChildren().at(it2.second.paramNum - 1)->getValue();
-                        } 
-                        else if (type == "literal") {
-                            if (node->getChildren().at(it2.second.paramNum - 1)->getValue() == "true") {
-                                value = "1";
-                            } else {
-                                value = "0";
-                            }
+                        string value;
+                        AST* child = node->getChildren().at(it2.second.paramNum - 1);
+                        if ((type == "num") || (type == "literal")) {
+                            value = getIntOrBool(child);
+                            output.append("li $a").append(to_string(it2.second.paramNum - 1)).append(", ").append(value);
+                        }        
+                        else if (type == "id") {
+                            output.append("lw $a").append(to_string(it2.second.paramNum - 1)).append(", ").append(getOffset(child->getName())).append("($sp)\n");
+                        }    
+                        else if (type == "funccall") {
+                            output.append(createAssemblyCode(child));
+                            output.append("move $a").append(to_string(it2.second.paramNum - 1)).append(", $v0").append("\n");                            
+                        }   
+                        else {
+                            output.append(createAssemblyCode(child));
+                            output.append("move $a").append(to_string(it2.second.paramNum - 1)).append(", $t").append(to_string(currentRegister)).append("\n");
                         }
-                        
-                        output.append("li $a").append(to_string(it2.second.paramNum - 1)).append(", ").append(value);
                     } 
                     else if (it2.second.paramNum != 0) {
                         string value;
@@ -140,7 +157,7 @@ string createAssemblyCode(AST * node) {
                             }
                         }
                         
-                        output.append("li $t").append(to_string(it2.second.paramNum - 5)).append(", ").append(value);                        
+                        output.append("li $t").append(to_string(it2.second.paramNum - 5)).append(", ").append(value).append("\n");                        
                     }
                 }
                 output.append("jal ").append(node->getName()).append("\n");
@@ -190,9 +207,13 @@ string createAssemblyCode(AST * node) {
                     output.append("li $v0, 4\nla $a0, label").append(to_string(labelNum)).append("\nsyscall\n");
                     labelNum++;    
                 }
-                else if (name == "printi") { 
+                else if (name == "printi") {
                     strOutput = getIntOrBool(node->getChildren().at(0));
-                    if (strOutput == "id") {
+                    if (strOutput == "error") {
+                        output.append(createAssemblyCode(node->getChildren().at(0)));
+                        output.append("move $a0, $v0\nli $v0, 1\n").append("\nsyscall\n");
+                    }
+                    else if (strOutput == "id") {
                         output.append("li $v0, 1\nlw $a0, ").append(getOffset(node->getChildren().at(0)->getName())).append("($sp)\n").append("syscall\n");
                     } 
                     else {
@@ -254,7 +275,7 @@ string createAssemblyCode(AST * node) {
     }
     else if (temp == "else") {
         for (AST* child : node->getChildren()) {
-            createAssemblyCode(child);
+            output.append(createAssemblyCode(child));
         }        
     }
 
@@ -268,8 +289,18 @@ string createAssemblyCode(AST * node) {
         else {
             if (node->getChildren().size() > 0) {
                 AST *child = node->getChildren().at(0);
-                output.append("li $v0, ").append(getIntOrBool(child)).append("\n");
+                string childType = child->getNodeType();
+                if ((childType == "num") || childType == "literal") {
+                    output.append("li $v0, ").append(getIntOrBool(child)).append("\n");
+                }
+                else if (childType == "id") {
+                    output.append("lw $v0, ").append(getOffset(child->getName())).append("($sp)\n");
+                }
+                else {
+                    output.append(createAssemblyCode(child));
+                }
             }
+            output.append("jr $ra\n");
         }
     }
     else if (temp == "while") {
@@ -284,7 +315,7 @@ string createAssemblyCode(AST * node) {
         temp = writeTest(node->getChildren().at(0), secondLabel);
         output.append(temp);
         for (int i = 1; i < node->getChildren().size(); i++) {
-            createAssemblyCode(node->getChildren().at(i));
+            output.append(createAssemblyCode(node->getChildren().at(i)));
         }        
         output.append("b label").append(to_string(firstLabel)).append("\n");
         output.append("label").append(to_string(secondLabel)).append(":\n");
@@ -407,12 +438,12 @@ string writeTest(AST* node, int localLabelNum) {
     }
     else if (node->getNodeType() == "compare") {
         int outputRegister = currentRegister;
-        createAssemblyCode(node);
+        output.append(createAssemblyCode(node));
         output.append("beq $0, $t").append(to_string(outputRegister)).append(", label").append(to_string(localLabelNum)).append("\n");        
     }
     else if (node->getNodeType() == "logical") {
         int outputRegister = currentRegister;
-        createAssemblyCode(node);
+        output.append(createAssemblyCode(node));
         output.append("beq $0, $t").append(to_string(outputRegister)).append(", label").append(to_string(localLabelNum)).append("\n");               
     }
     return output;

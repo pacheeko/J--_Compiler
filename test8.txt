@@ -1,9 +1,0 @@
-boolean b;
-
-main() {
-
-}
-
-int func() {
-
-}

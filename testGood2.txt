@@ -1,9 +1,0 @@
-main() {
-    if (false || (5 > 4)) {
-        prints("Hello everyone");
-    }
-    if ((5+2) >= (9+1)) {
-        prints("another one");
-    }
-    prints("done");
-}
