@@ -17,6 +17,7 @@ int labelNum = 0, whileLabelNum = -1, currentRegister = 0;
 unordered_map<string, entry> currSymTable;
 vector<string> funcNames, variableStack;
 bool inMain = false;
+extern char* filename;
 
 //Function
 string createAssemblyCode(AST * root);
@@ -26,7 +27,11 @@ string getOffset(string input);
 string loadRegister(AST* node, int resultRegister);
 
 void generateCode(AST * root) {
-    ofstream file("output.asm");
+    string fname = string(filename);
+    auto it = fname.find(".");
+    fname = fname.substr(0,it);
+    fname.append(".asm");
+    ofstream file(fname);
     dataSec = "\t.globl main\n\t.data\n";
     root->Print();
 
