@@ -13,6 +13,7 @@ Run instructions:
 Type './main testfile' to run the parser, with testfile being the directory of the file you 
 would like to parse. Several test files have been included. For example, execute the 
 command './main test1.txt' with the test1.txt file in the same directory as the compiler to 
-do semantic checking on this test example.
+generate a .asm file in the same directory named 'test1.txt.asm'. Then run this asm file using spim
+to get the output of the code given.
 
 ** The compiler has been compiled and tested on the CPSC linux machines. **
