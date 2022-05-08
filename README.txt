@@ -1,7 +1,7 @@
 Braydon Pacheco (30100449)
 CPSC 411 Project
 
-Compiler for j-- language.
+Compiler for j-- language. The scanner was built using the flex scanner generator tool. The parser was built using the bison parser tools.
 
 Compile instructions:
 
